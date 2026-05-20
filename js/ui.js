@@ -146,7 +146,7 @@ function displayRoll(result, label) {
 
 // ── Auth Guard ────────────────────────────────────────────────
 import { auth } from './firebase-config.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
 export function requireAuth(redirectTo = 'index.html') {
   return new Promise(resolve => {

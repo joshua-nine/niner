@@ -16,20 +16,19 @@
   ╚══════════════════════════════════════════════════════════╝
 */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth }        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore }   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getAuth }        from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+import { getFirestore }   from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-// ── REPLACE THESE WITH YOUR OWN FIREBASE CONFIG ──────────────
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyBSWFYfRiSw4n-UYwszaGKTjvdPjlTyPjc",
+  authDomain:        "dcc-campaign.firebaseapp.com",
+  projectId:         "dcc-campaign",
+  storageBucket:     "dcc-campaign.firebasestorage.app",
+  messagingSenderId: "328123402638",
+  appId:             "1:328123402638:web:df0027e87e5fa277fb3cdf",
+  measurementId:     "G-BFT9RX75D0"
 };
-// ─────────────────────────────────────────────────────────────
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);

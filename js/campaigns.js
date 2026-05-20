@@ -3,7 +3,7 @@ import {
   collection, doc, addDoc, getDocs, getDoc,
   updateDoc, deleteDoc, query, where, arrayUnion,
   serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 export async function createCampaign(userId, displayName) {
   const ref = await addDoc(collection(db, 'campaigns'), {

@@ -2,7 +2,7 @@ import { db } from './firebase-config.js';
 import {
   collection, doc, addDoc, getDocs, getDoc,
   updateDoc, deleteDoc, query, where, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 export async function createCharacter(userId) {
   const defaultSheet = {
