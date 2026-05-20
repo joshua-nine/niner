@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NinerSheet // Command Center</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="dashboard.html" class="navbar-brand">[NINER]<span>SHEET</span></a>
+    <div class="navbar-nav">
+      <span id="user-display" class="text-dim text-mono" style="font-size:13px;"></span>
+      <button class="btn btn-ghost" id="logout-btn" style="font-size:11px;padding:7px 14px;">LOGOUT</button>
+    </div>
+  </nav>
+
+  <div class="container page-wrap">
+
+    <!-- Invite banner -->
+    <div id="invite-banner" class="invite-banner hidden">
+      <div class="invite-banner-title">// Pending Campaign Invites</div>
+      <div id="invite-list"></div>
+    </div>
+
+    <div class="dash-grid">
+
+      <!-- Characters column -->
+      <div>
+        <div class="section-header">
+          <span class="section-title">Your Characters</span>
+        </div>
+        <div class="char-grid" id="char-grid">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+      <!-- Campaigns column -->
+      <div>
+        <div class="section-header">
+          <span class="section-title">Your Campaigns</span>
+        </div>
+        <div class="campaign-grid" id="campaign-grid">
+          <div class="spinner"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Delete Character Modal -->
+  <div class="modal-overlay" id="delete-char-modal">
+    <div class="modal">
+      <div class="modal-title">Delete Character?</div>
+      <p style="color:var(--text-dim);font-size:14px;">This will permanently delete <strong id="delete-char-name" class="text-neon"></strong>. This cannot be undone.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="delete-char-cancel">Cancel</button>
+        <button class="btn btn-red" id="delete-char-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Campaign Modal -->
+  <div class="modal-overlay" id="delete-camp-modal">
+    <div class="modal">
+      <div class="modal-title">Delete Campaign?</div>
+      <p style="color:var(--text-dim);font-size:14px;">This will permanently delete <strong id="delete-camp-name" class="text-blue"></strong> and all its data.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="delete-camp-cancel">Cancel</button>
+        <button class="btn btn-red" id="delete-camp-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, injectSharedUI, toast, openModal, closeModal, setupModalClose } from './js/ui.js';
+    import { getCharacters, createCharacter, deleteCharacter } from './js/characters.js';
+    import { getCampaigns, createCampaign, deleteCampaign, getPendingInvites, acceptInvite, declineInvite } from './js/campaigns.js';
+    import { auth } from './js/firebase-config.js';
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    let currentUser;
+
+    (async () => {
+      currentUser = await requireAuth('index.html');
+      injectSharedUI(currentUser);
+
+      document.getElementById('user-display').textContent = currentUser.displayName || currentUser.email;
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await signOut(auth);
+        window.location.href = 'index.html';
+      });
+
+      setupModalClose('delete-char-modal');
+      setupModalClose('delete-camp-modal');
+
+      await loadAll();
+    })();
+
+    async function loadAll() {
+      await Promise.all([loadCharacters(), loadCampaigns(), loadInvites()]);
+    }
+
+    // ── Characters ──────────────────────────────────────────────
+    let pendingDeleteChar = null;
+
+    async function loadCharacters() {
+      const grid  = document.getElementById('char-grid');
+      const chars = await getCharacters(currentUser.uid);
+      grid.innerHTML = '';
+
+      chars.forEach(ch => {
+        const hpPct  = Math.round((ch.hpCurrent / (ch.hpMax || 1)) * 100);
+        const isFull = hpPct >= 80;
+        const card   = document.createElement('div');
+        card.className = 'char-card';
+        card.innerHTML = `
+          <button class="delete-btn" data-id="${ch.id}" title="Delete">✕</button>
+          <div class="char-name">${escHtml(ch.name)}</div>
+          <div class="char-meta">${escHtml(ch.race || '—')} ${escHtml(ch.class || '—')} · Lv ${ch.level || 1}</div>
+          <div class="flex items-center gap-1">
+            <span class="text-mono" style="font-size:12px;color:var(--orange)">HP ${ch.hpCurrent ?? '—'}/${ch.hpMax ?? '—'}</span>
+            <span class="badge badge-neon" style="font-size:10px;">${ch.alignment || '?'}</span>
+          </div>
+          <div class="hp-bar mt-1">
+            <div class="hp-bar-fill ${isFull ? 'full' : ''}" style="width:${Math.min(hpPct,100)}%"></div>
+          </div>
+        `;
+        card.addEventListener('click', e => {
+          if (e.target.classList.contains('delete-btn')) return;
+          window.location.href = `character.html?id=${ch.id}`;
+        });
+        card.querySelector('.delete-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          pendingDeleteChar = { id: ch.id, name: ch.name };
+          document.getElementById('delete-char-name').textContent = ch.name;
+          openModal('delete-char-modal');
+        });
+        grid.appendChild(card);
+      });
+
+      // Add card
+      const addCard = document.createElement('div');
+      addCard.className = 'add-card';
+      addCard.innerHTML = '+ New Character';
+      addCard.addEventListener('click', async () => {
+        addCard.textContent = 'Creating...';
+        const id = await createCharacter(currentUser.uid);
+        window.location.href = `character.html?id=${id}`;
+      });
+      grid.appendChild(addCard);
+    }
+
+    document.getElementById('delete-char-cancel')?.addEventListener('click', () => closeModal('delete-char-modal'));
+    document.getElementById('delete-char-confirm')?.addEventListener('click', async () => {
+      if (!pendingDeleteChar) return;
+      await deleteCharacter(pendingDeleteChar.id);
+      closeModal('delete-char-modal');
+      toast(`${pendingDeleteChar.name} deleted.`, 'warn');
+      pendingDeleteChar = null;
+      loadCharacters();
+    });
+
+    // ── Campaigns ────────────────────────────────────────────────
+    let pendingDeleteCamp = null;
+
+    async function loadCampaigns() {
+      const grid  = document.getElementById('campaign-grid');
+      const camps = await getCampaigns(currentUser.uid);
+      grid.innerHTML = '';
+
+      camps.forEach(c => {
+        const isOwner = c.ownerId === currentUser.uid;
+        const card    = document.createElement('div');
+        card.className = 'campaign-card';
+        card.innerHTML = `
+          ${isOwner ? `<button class="delete-btn" data-id="${c.id}" title="Delete">✕</button>` : ''}
+          <div class="campaign-name">${escHtml(c.name)}</div>
+          <div class="campaign-meta">DM: ${escHtml(c.dmName || '—')}</div>
+          <div class="campaign-meta" style="margin-top:4px;">${c.members?.length || 1} player${c.members?.length !== 1 ? 's' : ''} · ${c.sessions?.length || 0} sessions</div>
+        `;
+        card.addEventListener('click', e => {
+          if (e.target.classList.contains('delete-btn')) return;
+          window.location.href = `campaign.html?id=${c.id}`;
+        });
+        if (isOwner) {
+          card.querySelector('.delete-btn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            pendingDeleteCamp = { id: c.id, name: c.name };
+            document.getElementById('delete-camp-name').textContent = c.name;
+            openModal('delete-camp-modal');
+          });
+        }
+        grid.appendChild(card);
+      });
+
+      const addCard = document.createElement('div');
+      addCard.className = 'add-card add-card-campaign';
+      addCard.innerHTML = '+ New Campaign';
+      addCard.addEventListener('click', async () => {
+        addCard.textContent = 'Creating...';
+        const id = await createCampaign(currentUser.uid, currentUser.displayName);
+        window.location.href = `campaign.html?id=${id}`;
+      });
+      grid.appendChild(addCard);
+    }
+
+    document.getElementById('delete-camp-cancel')?.addEventListener('click', () => closeModal('delete-camp-modal'));
+    document.getElementById('delete-camp-confirm')?.addEventListener('click', async () => {
+      if (!pendingDeleteCamp) return;
+      await deleteCampaign(pendingDeleteCamp.id);
+      closeModal('delete-camp-modal');
+      toast(`Campaign deleted.`, 'warn');
+      pendingDeleteCamp = null;
+      loadCampaigns();
+    });
+
+    // ── Invites ──────────────────────────────────────────────────
+    async function loadInvites() {
+      const invites = await getPendingInvites(currentUser.email);
+      const banner  = document.getElementById('invite-banner');
+      const list    = document.getElementById('invite-list');
+      if (!invites.length) { banner.classList.add('hidden'); return; }
+      banner.classList.remove('hidden');
+      list.innerHTML = '';
+      invites.forEach(inv => {
+        const row = document.createElement('div');
+        row.className = 'invite-item';
+        row.innerHTML = `
+          <span style="font-size:13px;"><strong class="text-blue">${escHtml(inv.campaignName)}</strong> <span class="text-dim">from ${escHtml(inv.senderName)}</span></span>
+          <div class="invite-actions">
+            <button class="btn btn-neon" style="padding:5px 12px;font-size:11px;" data-accept="${inv.id}">Accept</button>
+            <button class="btn btn-ghost" style="padding:5px 12px;font-size:11px;" data-decline="${inv.id}">Decline</button>
+          </div>
+        `;
+        row.querySelector('[data-accept]').addEventListener('click', async () => {
+          const campId = await acceptInvite(inv.id, currentUser.uid);
+          toast('Joined campaign!');
+          loadAll();
+          window.location.href = `campaign.html?id=${campId}`;
+        });
+        row.querySelector('[data-decline]').addEventListener('click', async () => {
+          await declineInvite(inv.id);
+          toast('Invite declined.', 'warn');
+          loadInvites();
+        });
+        list.appendChild(row);
+      });
+    }
+
+    function escHtml(str) {
+      return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>

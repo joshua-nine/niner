@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NinerSheet // Character Sheet</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/character.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="dashboard.html" class="navbar-brand">[NINER]<span>SHEET</span></a>
+    <div class="navbar-nav">
+      <span class="sheet-save-indicator" id="save-indicator">AUTO-SAVE ON</span>
+      <a href="dashboard.html" class="btn btn-ghost" style="font-size:11px;padding:7px 14px;">← BACK</a>
+    </div>
+  </nav>
+
+  <div class="container sheet-wrap">
+
+    <!-- Identity Row -->
+    <div class="mt-2 mb-2">
+      <div class="section-title mb-1">Character Info</div>
+      <div class="identity-grid" id="identity-grid">
+        <div class="form-group">
+          <label>Character Name</label>
+          <input type="text" id="f-name" placeholder="Aldric Stormcloak">
+        </div>
+        <div class="form-group">
+          <label>Class</label>
+          <input type="text" id="f-class" placeholder="Fighter">
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <input type="number" id="f-level" min="1" max="20" value="1">
+        </div>
+        <div class="form-group">
+          <label>Background</label>
+          <input type="text" id="f-background" placeholder="Soldier">
+        </div>
+        <div class="form-group">
+          <label>Race</label>
+          <input type="text" id="f-race" placeholder="Human">
+        </div>
+        <div class="form-group">
+          <label>Alignment</label>
+          <select id="f-alignment">
+            <option value="">—</option>
+            <option>Lawful Good</option><option>Neutral Good</option><option>Chaotic Good</option>
+            <option>Lawful Neutral</option><option>True Neutral</option><option>Chaotic Neutral</option>
+            <option>Lawful Evil</option><option>Neutral Evil</option><option>Chaotic Evil</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Experience</label>
+          <input type="number" id="f-xp" min="0" value="0">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Player Name</label>
+          <input type="text" id="f-playerName" placeholder="Your name">
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px;">
+          <input type="checkbox" id="f-inspiration" style="width:auto;">
+          <label for="f-inspiration" style="margin:0;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);">Inspiration</label>
+          <span class="badge badge-neon" style="margin-left:auto;">PROF BONUS: <span id="prof-display">+2</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ability Scores -->
+    <div class="section-title mb-1">Ability Scores</div>
+    <div class="ability-grid">
+      <div class="ability-block">
+        <div class="ability-label">Strength</div>
+        <input class="ability-score-input" type="number" id="f-str" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-str">+0</div>
+      </div>
+      <div class="ability-block">
+        <div class="ability-label">Dexterity</div>
+        <input class="ability-score-input" type="number" id="f-dex" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-dex">+0</div>
+      </div>
+      <div class="ability-block">
+        <div class="ability-label">Constitution</div>
+        <input class="ability-score-input" type="number" id="f-con" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-con">+0</div>
+      </div>
+      <div class="ability-block">
+        <div class="ability-label">Intelligence</div>
+        <input class="ability-score-input" type="number" id="f-int" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-int">+0</div>
+      </div>
+      <div class="ability-block">
+        <div class="ability-label">Wisdom</div>
+        <input class="ability-score-input" type="number" id="f-wis" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-wis">+0</div>
+      </div>
+      <div class="ability-block">
+        <div class="ability-label">Charisma</div>
+        <input class="ability-score-input" type="number" id="f-cha" min="1" max="30" value="10">
+        <div class="ability-mod" id="mod-cha">+0</div>
+      </div>
+    </div>
+
+    <!-- Combat Stats -->
+    <div class="section-title mb-1">Combat</div>
+    <div class="combat-grid mb-2">
+      <div class="stat-box">
+        <div class="stat-label">Armor Class</div>
+        <input type="number" id="f-ac" min="0" max="30" value="10" style="text-align:center;font-family:var(--font-mono);font-size:26px;color:var(--neon);background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 4px;box-shadow:none;">
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Initiative</div>
+        <div class="stat-value" id="initiative-display">+0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Speed</div>
+        <input type="number" id="f-speed" min="0" value="30" style="text-align:center;font-family:var(--font-mono);font-size:26px;color:var(--neon);background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 4px;box-shadow:none;">
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Hit Dice</div>
+        <input type="text" id="f-hitDice" value="1d8" style="text-align:center;font-family:var(--font-mono);font-size:18px;color:var(--neon);background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 4px;box-shadow:none;">
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Passive Perc.</div>
+        <div class="stat-value" id="passive-perc-display">10</div>
+      </div>
+    </div>
+
+    <!-- HP + Death Saves row -->
+    <div class="grid-2 mb-2">
+      <div class="hp-block">
+        <div class="section-title mb-1" style="color:var(--orange);">Hit Points</div>
+        <div class="hp-row">
+          <div class="hp-input-wrap">
+            <label>Current</label>
+            <input type="number" id="f-hpCurrent" min="0" style="text-align:center;font-family:var(--font-mono);font-size:28px;color:var(--orange);">
+          </div>
+          <div style="color:var(--text-dim);font-size:24px;padding-bottom:4px;">/</div>
+          <div class="hp-input-wrap">
+            <label>Max</label>
+            <input type="number" id="f-hpMax" min="0" style="text-align:center;font-family:var(--font-mono);font-size:28px;color:var(--orange);">
+          </div>
+          <div class="hp-input-wrap">
+            <label>Temp</label>
+            <input type="number" id="f-hpTemp" min="0" style="text-align:center;font-family:var(--font-mono);font-size:28px;color:var(--yellow);">
+          </div>
+        </div>
+      </div>
+      <div class="death-saves">
+        <div class="death-saves-title">// Death Saves</div>
+        <div class="death-row">
+          <span style="color:var(--neon);">Success</span>
+          <div class="death-box" id="ds-s1"></div>
+          <div class="death-box" id="ds-s2"></div>
+          <div class="death-box" id="ds-s3"></div>
+        </div>
+        <div class="death-row">
+          <span style="color:var(--red);">Failure</span>
+          <div class="death-box" id="ds-f1"></div>
+          <div class="death-box" id="ds-f2"></div>
+          <div class="death-box" id="ds-f3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet Main: sidebar + tabbed content -->
+    <div class="sheet-main">
+
+      <!-- Sidebar: saving throws + skills -->
+      <div class="sheet-sidebar">
+        <div class="panel mb-2">
+          <div class="section-title mb-1">Saving Throws</div>
+          <div class="proficiency-list" id="saving-throws-list"></div>
+        </div>
+        <div class="panel">
+          <div class="section-title mb-1">Skills</div>
+          <div class="proficiency-list" id="skills-list"></div>
+        </div>
+      </div>
+
+      <!-- Main content tabs -->
+      <div>
+        <div class="tabs" id="sheet-tabs">
+          <button class="tab-btn active" data-tab="tab-combat">Combat</button>
+          <button class="tab-btn" data-tab="tab-spells">Spells</button>
+          <button class="tab-btn" data-tab="tab-inventory">Inventory</button>
+          <button class="tab-btn" data-tab="tab-bio">Biography</button>
+        </div>
+
+        <!-- Combat tab -->
+        <div class="tab-pane active" id="tab-combat">
+          <div class="section-header">
+            <span class="section-title">Attacks &amp; Spellcasting</span>
+            <button class="btn btn-neon" id="add-attack-btn" style="font-size:11px;padding:6px 12px;">+ Add Attack</button>
+          </div>
+          <table class="attacks-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Attack Bonus</th><th>Damage / Type</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="attacks-body"></tbody>
+          </table>
+
+          <div class="section-title mb-1 mt-2">Other Proficiencies &amp; Languages</div>
+          <textarea id="f-proficiencies" rows="4" placeholder="Armor, weapons, tools, languages..."></textarea>
+        </div>
+
+        <!-- Spells tab -->
+        <div class="tab-pane" id="tab-spells">
+          <div class="grid-3 mb-2">
+            <div class="form-group">
+              <label>Spellcasting Class</label>
+              <input type="text" id="f-spellcastingClass" placeholder="Wizard">
+            </div>
+            <div class="form-group">
+              <label>Spellcasting Ability</label>
+              <select id="f-spellcastingAbility">
+                <option value="">—</option>
+                <option>INT</option><option>WIS</option><option>CHA</option>
+              </select>
+            </div>
+            <div></div>
+            <div class="form-group">
+              <label>Spell Save DC</label>
+              <input type="number" id="f-spellSaveDC" min="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>Spell Attack Bonus</label>
+              <input type="number" id="f-spellAttackBonus" min="-5" value="0">
+            </div>
+          </div>
+
+          <div class="section-title mb-1">Spell Slots</div>
+          <div class="spell-slot-grid" id="spell-slots-grid"></div>
+
+          <div class="section-header mt-2">
+            <span class="section-title">Spell List</span>
+            <button class="btn btn-purple" id="add-spell-btn" style="font-size:11px;padding:6px 12px;color:var(--purple);border-color:var(--purple);">+ Add Spell</button>
+          </div>
+          <div id="spells-list"></div>
+        </div>
+
+        <!-- Inventory tab -->
+        <div class="tab-pane" id="tab-inventory">
+          <div class="section-title mb-1">Currency</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">
+            <div class="form-group"><label>CP</label><input type="number" id="f-cp" min="0" value="0"></div>
+            <div class="form-group"><label>SP</label><input type="number" id="f-sp" min="0" value="0"></div>
+            <div class="form-group"><label>EP</label><input type="number" id="f-ep" min="0" value="0"></div>
+            <div class="form-group"><label>GP</label><input type="number" id="f-gp" min="0" value="0"></div>
+            <div class="form-group"><label>PP</label><input type="number" id="f-pp" min="0" value="0"></div>
+          </div>
+          <div class="section-title mb-1">Equipment</div>
+          <textarea id="f-equipment" rows="12" placeholder="List your equipment here..."></textarea>
+        </div>
+
+        <!-- Biography tab -->
+        <div class="tab-pane" id="tab-bio">
+          <div class="grid-2 mb-2">
+            <div class="form-group">
+              <label>Personality Traits</label>
+              <textarea id="f-personalityTraits" rows="3" placeholder="I judge people by their actions..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Ideals</label>
+              <textarea id="f-ideals" rows="3" placeholder="Greater good. I must protect..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Bonds</label>
+              <textarea id="f-bonds" rows="3" placeholder="I will never forget..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Flaws</label>
+              <textarea id="f-flaws" rows="3" placeholder="I have trouble trusting..."></textarea>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Features &amp; Traits</label>
+            <textarea id="f-featuresTraits" rows="6" placeholder="Class features, racial traits, feats..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Backstory</label>
+            <textarea id="f-backstory" rows="8" placeholder="Character background and history..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="f-notes" rows="5" placeholder="Miscellaneous notes..."></textarea>
+          </div>
+        </div>
+
+      </div><!-- end main tabs -->
+    </div><!-- end sheet-main -->
+
+  </div><!-- end container -->
+
+  <script type="module">
+    import { requireAuth, injectSharedUI, toast, setupTabs } from './js/ui.js';
+    import { getCharacter, saveCharacter } from './js/characters.js';
+    import { getMod, formatMod, getProfBonus, getSkillBonus, getSavingThrowBonus,
+             getPassivePerception, getInitiative, SKILL_ABILITY, SKILL_LABELS,
+             SPELL_SLOTS_BY_LEVEL, debounce } from './js/sheet.js';
+
+    const params  = new URLSearchParams(window.location.search);
+    const charId  = params.get('id');
+    if (!charId) window.location.href = 'dashboard.html';
+
+    let char = {};
+    let saveTimer;
+
+    const ABILITIES  = ['str','dex','con','int','wis','cha'];
+    const SAVES_ORDER= ['str','dex','con','int','wis','cha'];
+    const SAVE_LABELS= { str:'Strength',dex:'Dexterity',con:'Constitution',int:'Intelligence',wis:'Wisdom',cha:'Charisma' };
+
+    (async () => {
+      const user = await requireAuth('index.html');
+      injectSharedUI(user);
+      setupTabs('#sheet-tabs');
+
+      char = await getCharacter(charId);
+      if (!char || char.ownerId !== user.uid) {
+        toast('Character not found.', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+        return;
+      }
+
+      populateForm();
+      buildProficiencyLists();
+      buildAttacksTable();
+      buildSpellSlots();
+      buildSpellList();
+      setupAutoSave();
+      setupDeathSaves();
+      updateCalculated();
+
+      document.getElementById('add-attack-btn').addEventListener('click', addAttackRow);
+      document.getElementById('add-spell-btn').addEventListener('click', addSpellRow);
+    })();
+
+    // ── Populate all fields ──────────────────────────────────────
+    function populateForm() {
+      const fields = ['name','playerName','class','level','background','race','xp','ac','speed','hitDice',
+        'hpMax','hpCurrent','hpTemp','cp','sp','ep','gp','pp',
+        'personalityTraits','ideals','bonds','flaws','featuresTraits','backstory','notes','proficiencies',
+        'spellcastingClass','spellcastingAbility','spellSaveDC','spellAttackBonus'];
+      fields.forEach(f => {
+        const el = document.getElementById('f-' + f);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = !!char[f];
+        else el.value = char[f] ?? '';
+      });
+      ABILITIES.forEach(a => {
+        const el = document.getElementById('f-' + a);
+        if (el) el.value = char[a] ?? 10;
+      });
+      const alignEl = document.getElementById('f-alignment');
+      if (alignEl) alignEl.value = char.alignment || '';
+      const inspEl = document.getElementById('f-inspiration');
+      if (inspEl) inspEl.checked = !!char.inspiration;
+    }
+
+    // ── Auto-save ────────────────────────────────────────────────
+    function setupAutoSave() {
+      const indicator = document.getElementById('save-indicator');
+      const save      = debounce(async () => {
+        indicator.className = 'sheet-save-indicator saving';
+        indicator.textContent = 'SAVING...';
+        await saveCharacter(charId, collectFormData());
+        indicator.className = 'sheet-save-indicator saved';
+        indicator.textContent = 'SAVED ✓';
+        setTimeout(() => {
+          indicator.className = 'sheet-save-indicator';
+          indicator.textContent = 'AUTO-SAVE ON';
+        }, 2000);
+      }, 800);
+
+      document.querySelectorAll('input,select,textarea').forEach(el => {
+        el.addEventListener('input', () => { save(); updateCalculated(); });
+        el.addEventListener('change', () => { save(); updateCalculated(); });
+      });
+    }
+
+    function collectFormData() {
+      const data = {};
+      ['name','playerName','class','background','race','xp','speed','hitDice',
+       'personalityTraits','ideals','bonds','flaws','featuresTraits','backstory','notes','proficiencies',
+       'spellcastingClass','spellcastingAbility'].forEach(f => {
+        const el = document.getElementById('f-'+f);
+        if (el) data[f] = el.value;
+      });
+      ['level','ac','hpMax','hpCurrent','hpTemp','cp','sp','ep','gp','pp','spellSaveDC','spellAttackBonus'].forEach(f => {
+        const el = document.getElementById('f-'+f);
+        if (el) data[f] = parseInt(el.value) || 0;
+      });
+      ABILITIES.forEach(a => {
+        const el = document.getElementById('f-'+a);
+        if (el) data[a] = parseInt(el.value) || 10;
+      });
+      data.alignment   = document.getElementById('f-alignment')?.value || '';
+      data.inspiration = document.getElementById('f-inspiration')?.checked || false;
+      data.profBonus   = getProfBonus(parseInt(document.getElementById('f-level')?.value) || 1);
+      data.savingThrows = collectCheckboxGroup('st-');
+      data.skills      = collectCheckboxGroup('sk-');
+      data.attacks     = collectAttacks();
+      data.spells      = collectSpells();
+      data.spellSlots     = collectSpellSlotNums('ss-max-');
+      data.spellSlotsUsed = collectSpellSlotNums('ss-used-');
+      return data;
+    }
+
+    function collectCheckboxGroup(prefix) {
+      const out = {};
+      document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
+        out[el.id.slice(prefix.length)] = el.checked;
+      });
+      return out;
+    }
+
+    function collectSpellSlotNums(prefix) {
+      const out = {};
+      for (let i=1;i<=9;i++) {
+        const el = document.getElementById(prefix+i);
+        if (el) out[i] = parseInt(el.value)||0;
+      }
+      return out;
+    }
+
+    // ── Calculated fields ────────────────────────────────────────
+    function updateCalculated() {
+      const scores  = {};
+      ABILITIES.forEach(a => { scores[a] = parseInt(document.getElementById('f-'+a)?.value)||10; });
+      const level   = parseInt(document.getElementById('f-level')?.value)||1;
+      const pb      = getProfBonus(level);
+
+      ABILITIES.forEach(a => {
+        const mod = getMod(scores[a]);
+        const el  = document.getElementById('mod-'+a);
+        if (el) el.textContent = formatMod(mod);
+      });
+
+      document.getElementById('prof-display').textContent = '+'+pb;
+      document.getElementById('initiative-display').textContent = formatMod(getMod(scores.dex));
+
+      // Passive perception
+      const skProf = {};
+      document.querySelectorAll('[id^="sk-"]').forEach(el => { skProf[el.id.slice(3)] = el.checked; });
+      document.getElementById('passive-perc-display').textContent =
+        getPassivePerception(scores, skProf, pb);
+
+      // Update saving throw values
+      SAVES_ORDER.forEach(a => {
+        const profEl = document.getElementById('st-'+a);
+        const valEl  = document.getElementById('stv-'+a);
+        if (valEl) valEl.textContent = formatMod(getSavingThrowBonus(a, scores, profEl?.checked, pb));
+      });
+
+      // Update skill values
+      Object.keys(SKILL_ABILITY).forEach(sk => {
+        const profEl = document.getElementById('sk-'+sk);
+        const valEl  = document.getElementById('skv-'+sk);
+        if (valEl) valEl.textContent = formatMod(getSkillBonus(sk, scores, profEl?.checked, pb));
+      });
+    }
+
+    // ── Saving throws list ───────────────────────────────────────
+    function buildProficiencyLists() {
+      const stList = document.getElementById('saving-throws-list');
+      SAVES_ORDER.forEach(a => {
+        const profVal = char.savingThrows?.[a] || false;
+        const div = document.createElement('div');
+        div.className = 'prof-item';
+        div.innerHTML = `
+          <input type="checkbox" id="st-${a}" ${profVal ? 'checked' : ''}>
+          <span class="prof-value" id="stv-${a}">+0</span>
+          <span class="prof-name">${SAVE_LABELS[a]}</span>
+        `;
+        stList.appendChild(div);
+      });
+
+      const skList = document.getElementById('skills-list');
+      Object.keys(SKILL_ABILITY).forEach(sk => {
+        const profVal = char.skills?.[sk] || false;
+        const div = document.createElement('div');
+        div.className = 'prof-item';
+        div.innerHTML = `
+          <input type="checkbox" id="sk-${sk}" ${profVal ? 'checked' : ''}>
+          <span class="prof-value" id="skv-${sk}">+0</span>
+          <span class="prof-name">${SKILL_LABELS[sk]}</span>
+          <span class="prof-ability">${SKILL_ABILITY[sk].toUpperCase()}</span>
+        `;
+        skList.appendChild(div);
+      });
+    }
+
+    // ── Attacks ──────────────────────────────────────────────────
+    function buildAttacksTable() {
+      const tbody = document.getElementById('attacks-body');
+      tbody.innerHTML = '';
+      (char.attacks || []).forEach(atk => appendAttackRow(atk));
+    }
+
+    function addAttackRow() {
+      appendAttackRow({ name:'', bonus:'', damage:'' });
+    }
+
+    function appendAttackRow(atk) {
+      const tbody = document.getElementById('attacks-body');
+      const tr    = document.createElement('tr');
+      tr.className = 'attack-row';
+      tr.innerHTML = `
+        <td><input type="text" value="${escHtml(atk.name||'')}" placeholder="Longsword" class="atk-name"></td>
+        <td><input type="text" value="${escHtml(atk.bonus||'')}" placeholder="+5" class="atk-bonus" style="width:80px;"></td>
+        <td><input type="text" value="${escHtml(atk.damage||'')}" placeholder="1d8+3 slashing" class="atk-damage"></td>
+        <td><button class="attack-del" title="Remove">✕</button></td>
+      `;
+      tr.querySelector('.attack-del').addEventListener('click', () => {
+        tr.remove();
+        triggerSave();
+      });
+      tbody.appendChild(tr);
+    }
+
+    function collectAttacks() {
+      return Array.from(document.querySelectorAll('#attacks-body .attack-row')).map(tr => ({
+        name:   tr.querySelector('.atk-name').value,
+        bonus:  tr.querySelector('.atk-bonus').value,
+        damage: tr.querySelector('.atk-damage').value,
+      }));
+    }
+
+    // ── Spell Slots ──────────────────────────────────────────────
+    function buildSpellSlots() {
+      const grid = document.getElementById('spell-slots-grid');
+      grid.innerHTML = '';
+      for (let i=1;i<=9;i++) {
+        const maxVal  = char.spellSlots?.[i] ?? 0;
+        const usedVal = char.spellSlotsUsed?.[i] ?? 0;
+        const div = document.createElement('div');
+        div.className = 'spell-slot-box';
+        div.innerHTML = `
+          <label>Level ${i}</label>
+          <div style="display:flex;gap:4px;align-items:center;justify-content:center;margin-bottom:4px;">
+            <input type="number" id="ss-max-${i}" min="0" max="9" value="${maxVal}" style="width:46px;text-align:center;padding:4px;font-size:13px;">
+            <span class="text-dim" style="font-size:11px;">max</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;justify-content:center;">
+            <input type="number" id="ss-used-${i}" min="0" max="9" value="${usedVal}" style="width:46px;text-align:center;padding:4px;font-size:13px;">
+            <span class="text-dim" style="font-size:11px;">used</span>
+          </div>
+        `;
+        grid.appendChild(div);
+      }
+    }
+
+    // ── Spells ───────────────────────────────────────────────────
+    function buildSpellList() {
+      const list = document.getElementById('spells-list');
+      list.innerHTML = '';
+      (char.spells || []).forEach(sp => appendSpellRow(sp));
+    }
+
+    function addSpellRow() {
+      appendSpellRow({ prepared: false, level: 0, name: '', school: '', castTime: '', range: '', components: '', duration: '', desc: '' });
+    }
+
+    function appendSpellRow(sp) {
+      const list = document.getElementById('spells-list');
+      const div  = document.createElement('div');
+      div.className = 'spell-item';
+      div.innerHTML = `
+        <input type="checkbox" class="sp-prepared" title="Prepared" ${sp.prepared?'checked':''}>
+        <input type="number" min="0" max="9" value="${sp.level||0}" class="sp-level" style="width:44px;text-align:center;padding:4px;">
+        <input type="text" value="${escHtml(sp.name||'')}" placeholder="Spell name" class="sp-name" style="flex:2;">
+        <input type="text" value="${escHtml(sp.school||'')}" placeholder="School" class="sp-school" style="flex:1;">
+        <input type="text" value="${escHtml(sp.castTime||'')}" placeholder="Cast time" class="sp-castTime" style="flex:1;">
+        <input type="text" value="${escHtml(sp.range||'')}" placeholder="Range" class="sp-range" style="flex:1;">
+        <button class="spell-del" title="Remove">✕</button>
+      `;
+      div.querySelector('.spell-del').addEventListener('click', () => { div.remove(); triggerSave(); });
+      list.appendChild(div);
+    }
+
+    function collectSpells() {
+      return Array.from(document.querySelectorAll('#spells-list .spell-item')).map(div => ({
+        prepared: div.querySelector('.sp-prepared').checked,
+        level:    parseInt(div.querySelector('.sp-level').value)||0,
+        name:     div.querySelector('.sp-name').value,
+        school:   div.querySelector('.sp-school').value,
+        castTime: div.querySelector('.sp-castTime').value,
+        range:    div.querySelector('.sp-range').value,
+      }));
+    }
+
+    // ── Death Saves ──────────────────────────────────────────────
+    function setupDeathSaves() {
+      updateDeathSaveDisplay();
+      ['s1','s2','s3'].forEach((id,i) => {
+        document.getElementById('ds-'+id)?.addEventListener('click', () => {
+          char.deathSaveSuccesses = toggleDeathSave(char.deathSaveSuccesses, i+1);
+          updateDeathSaveDisplay();
+          triggerSave();
+        });
+      });
+      ['f1','f2','f3'].forEach((id,i) => {
+        document.getElementById('ds-'+id)?.addEventListener('click', () => {
+          char.deathSaveFailures = toggleDeathSave(char.deathSaveFailures, i+1);
+          updateDeathSaveDisplay();
+          triggerSave();
+        });
+      });
+    }
+
+    function toggleDeathSave(current, slot) {
+      return current >= slot ? current - 1 : slot;
+    }
+
+    function updateDeathSaveDisplay() {
+      const s = char.deathSaveSuccesses || 0;
+      const f = char.deathSaveFailures  || 0;
+      [1,2,3].forEach(i => {
+        const sel = document.getElementById(`ds-s${i}`);
+        if (sel) sel.className = 'death-box' + (i<=s ? ' filled-success' : '');
+        const fel = document.getElementById(`ds-f${i}`);
+        if (fel) fel.className = 'death-box' + (i<=f ? ' filled-failure' : '');
+      });
+    }
+
+    function triggerSave() {
+      document.querySelector('input')?.dispatchEvent(new Event('input'));
+    }
+
+    function escHtml(str) {
+      return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+
+</body>
+</html>
