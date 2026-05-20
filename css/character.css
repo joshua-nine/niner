@@ -1,0 +1,268 @@
+.sheet-header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+.sheet-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sheet-save-indicator {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+.sheet-save-indicator.saving { color: var(--orange); }
+.sheet-save-indicator.saved  { color: var(--neon); }
+
+.sheet-wrap {
+  padding-bottom: 80px;
+}
+
+/* ── Identity row ── */
+.identity-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* ── Ability scores ── */
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.ability-block {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  padding: 12px 6px 10px;
+  transition: border-color 0.2s;
+}
+.ability-block:hover { border-color: var(--neon); }
+.ability-label {
+  font-family: var(--font-head);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ability-score-input {
+  width: 56px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  color: var(--neon);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0 0 4px;
+  margin-bottom: 6px;
+  box-shadow: none;
+}
+.ability-score-input:focus { border-bottom-color: var(--neon); outline: none; box-shadow: none; }
+.ability-mod {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--blue);
+  letter-spacing: 0;
+}
+
+/* ── Combat block ── */
+.combat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+/* ── HP block ── */
+.hp-block {
+  background: var(--panel2);
+  border: 1px solid var(--orange);
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 0 10px rgba(255,107,53,0.1);
+}
+.hp-row { display: flex; gap: 8px; align-items: flex-end; }
+.hp-input-wrap { flex: 1; }
+.hp-big {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  color: var(--orange);
+  text-align: center;
+}
+
+/* ── Death saves ── */
+.death-saves {
+  background: var(--panel2);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 0 10px rgba(255,45,85,0.1);
+}
+.death-saves-title {
+  font-family: var(--font-head);
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.death-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--font-head);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.death-box {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+}
+.death-box.filled-success { background: var(--neon); border-color: var(--neon); }
+.death-box.filled-failure { background: var(--red);  border-color: var(--red); }
+
+/* ── Skills / Saving Throws ── */
+.proficiency-list { display: flex; flex-direction: column; gap: 3px; }
+.prof-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  transition: background 0.15s;
+  font-size: 13px;
+}
+.prof-item:hover { background: rgba(255,255,255,0.04); }
+.prof-item input[type="checkbox"] { flex-shrink: 0; }
+.prof-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--neon);
+  min-width: 30px;
+  text-align: right;
+}
+.prof-name { flex: 1; color: var(--text); }
+.prof-ability {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--font-head);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Attacks table ── */
+.attacks-table { margin-bottom: 12px; }
+.attack-row td { padding: 6px 8px; }
+.attack-row input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  font-size: 13px;
+  padding: 3px 4px;
+}
+.attack-row input:focus {
+  border-bottom-color: var(--neon);
+  box-shadow: none;
+  background: rgba(0,255,136,0.04);
+}
+.attack-del {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  transition: color 0.15s;
+}
+.attack-del:hover { color: var(--red); }
+
+/* ── Spell slots ── */
+.spell-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.spell-slot-box {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+}
+.spell-slot-box label {
+  font-size: 10px;
+  margin-bottom: 6px;
+  color: var(--purple);
+}
+.slot-pips {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.slot-pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--purple);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.slot-pip.used { background: transparent; border-color: var(--border); }
+.slot-pip.available { background: var(--purple); }
+
+/* Spell list */
+.spell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.spell-item input[type="checkbox"] { flex-shrink: 0; }
+.spell-del { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; margin-left: auto; padding: 2px 4px; }
+.spell-del:hover { color: var(--red); }
+
+/* Tabs layout */
+.sheet-main {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+}
+.sheet-sidebar {}
+
+@media (max-width: 900px) {
+  .sheet-main { grid-template-columns: 1fr; }
+  .ability-grid { grid-template-columns: repeat(3, 1fr); }
+  .combat-grid { grid-template-columns: repeat(3, 1fr); }
+  .identity-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .combat-grid { grid-template-columns: repeat(2, 1fr); }
+  .identity-grid { grid-template-columns: 1fr; }
+}

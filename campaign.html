@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NinerSheet // Campaign</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/campaign.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="dashboard.html" class="navbar-brand">[NINER]<span>SHEET</span></a>
+    <div class="navbar-nav">
+      <span class="text-dim text-mono" id="camp-save-indicator" style="font-size:12px;"></span>
+      <a href="dashboard.html" class="btn btn-ghost" style="font-size:11px;padding:7px 14px;">← BACK</a>
+    </div>
+  </nav>
+
+  <div class="container camp-page">
+
+    <!-- Campaign header -->
+    <div class="panel panel--blue mb-2">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;flex-wrap:wrap;">
+        <div class="form-group">
+          <label>Campaign Name</label>
+          <input type="text" id="c-name" placeholder="The Sunken City" style="font-family:var(--font-head);font-size:18px;color:var(--blue);">
+        </div>
+        <div class="form-group">
+          <label>Dungeon Master</label>
+          <input type="text" id="c-dmName" placeholder="DM Name">
+        </div>
+        <div class="form-group">
+          <label>Setting</label>
+          <input type="text" id="c-setting" placeholder="Forgotten Realms">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="c-description" rows="2" placeholder="Brief campaign summary..."></textarea>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="camp-tabs">
+      <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+      <button class="tab-btn" data-tab="tab-sessions">Sessions</button>
+      <button class="tab-btn" data-tab="tab-npcs">NPCs</button>
+      <button class="tab-btn" data-tab="tab-locations">Locations</button>
+      <button class="tab-btn" data-tab="tab-quests">Quests</button>
+      <button class="tab-btn" data-tab="tab-journal">Journal</button>
+      <button class="tab-btn" data-tab="tab-invite">Invite</button>
+    </div>
+
+    <!-- Overview -->
+    <div class="tab-pane active" id="tab-overview">
+      <div class="grid-2">
+        <div>
+          <div class="section-title mb-1">Party Members</div>
+          <div id="members-list"></div>
+        </div>
+        <div>
+          <div class="section-title mb-1">Campaign Stats</div>
+          <div class="panel" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="stat-box">
+              <div class="stat-label">Sessions</div>
+              <div class="stat-value text-blue" id="stat-sessions">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">NPCs</div>
+              <div class="stat-value text-blue" id="stat-npcs">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Locations</div>
+              <div class="stat-value text-purple" id="stat-locations">0</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Active Quests</div>
+              <div class="stat-value text-yellow" id="stat-quests" style="color:var(--yellow);">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="tab-pane" id="tab-sessions">
+      <div class="section-header">
+        <span class="section-title">Session Log</span>
+        <button class="btn btn-blue" id="add-session-btn" style="font-size:11px;padding:7px 14px;">+ Add Session</button>
+      </div>
+      <div id="sessions-list"></div>
+    </div>
+
+    <!-- NPCs -->
+    <div class="tab-pane" id="tab-npcs">
+      <div class="section-header">
+        <span class="section-title">NPCs</span>
+        <button class="btn btn-neon" id="add-npc-btn" style="font-size:11px;padding:7px 14px;">+ Add NPC</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Race / Class</th><th>Attitude</th><th>Notes</th><th></th></tr>
+        </thead>
+        <tbody id="npcs-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Locations -->
+    <div class="tab-pane" id="tab-locations">
+      <div class="section-header">
+        <span class="section-title">Locations</span>
+        <button class="btn btn-purple" id="add-location-btn" style="font-size:11px;padding:7px 14px;color:var(--purple);border-color:var(--purple);">+ Add Location</button>
+      </div>
+      <div class="location-grid" id="locations-grid"></div>
+    </div>
+
+    <!-- Quests -->
+    <div class="tab-pane" id="tab-quests">
+      <div class="section-header">
+        <span class="section-title">Active Quests</span>
+        <button class="btn btn-orange" id="add-quest-btn" style="font-size:11px;padding:7px 14px;">+ Add Quest</button>
+      </div>
+      <div id="quests-list"></div>
+      <div class="section-title mt-2 mb-1" style="opacity:0.6;">Completed Quests</div>
+      <div id="quests-completed-list"></div>
+    </div>
+
+    <!-- Journal -->
+    <div class="tab-pane" id="tab-journal">
+      <div class="section-header">
+        <span class="section-title">Campaign Journal</span>
+        <button class="btn btn-blue" id="add-journal-btn" style="font-size:11px;padding:7px 14px;">+ New Entry</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">A shared log for the whole party — record lore, discoveries, decisions, and anything worth remembering.</p>
+      <div id="journal-list"></div>
+    </div>
+
+    <!-- Invite -->
+    <div class="tab-pane" id="tab-invite">
+      <div class="panel panel--orange" style="max-width:480px;">
+        <div class="section-title mb-2" style="color:var(--orange);">Invite Player</div>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Enter a player's email address. They'll see an invite on their dashboard after logging in.</p>
+        <div class="form-group">
+          <label>Player Email Address</label>
+          <input type="email" id="invite-email" placeholder="player@realm.com">
+        </div>
+        <button class="btn btn-orange" id="send-invite-btn">Send Invite</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Session Modal -->
+  <div class="modal-overlay" id="session-modal">
+    <div class="modal" style="max-width:620px;">
+      <div class="modal-title" id="session-modal-title">Add Session</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Session Number / Title</label>
+          <input type="text" id="sm-title" placeholder="Session 1: The Dark Descent">
+        </div>
+        <div class="form-group">
+          <label>Date Played</label>
+          <input type="date" id="sm-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Session Summary</label>
+        <textarea id="sm-summary" rows="6" placeholder="What happened this session?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Highlights / Moments</label>
+        <textarea id="sm-highlights" rows="3" placeholder="Epic moments, funny quotes, clutch rolls..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="session-modal-cancel">Cancel</button>
+        <button class="btn btn-blue" id="session-modal-save">Save Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NPC Modal -->
+  <div class="modal-overlay" id="npc-modal">
+    <div class="modal">
+      <div class="modal-title" id="npc-modal-title">Add NPC</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="nm-name" placeholder="Gandalf the Grey">
+        </div>
+        <div class="form-group">
+          <label>Race / Class</label>
+          <input type="text" id="nm-race" placeholder="Wizard / Human">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Attitude</label>
+        <select id="nm-attitude">
+          <option value="unknown">Unknown</option>
+          <option value="friendly">Friendly</option>
+          <option value="neutral">Neutral</option>
+          <option value="hostile">Hostile</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="nm-desc" rows="3" placeholder="Physical description, personality..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="nm-notes" rows="3" placeholder="Plot-relevant info, quests, secrets..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="npc-modal-cancel">Cancel</button>
+        <button class="btn btn-neon" id="npc-modal-save">Save NPC</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location Modal -->
+  <div class="modal-overlay" id="location-modal">
+    <div class="modal">
+      <div class="modal-title" id="loc-modal-title">Add Location</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Location Name</label>
+          <input type="text" id="lm-name" placeholder="The Sunken Library">
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <input type="text" id="lm-type" placeholder="Dungeon / City / Forest...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="lm-desc" rows="5" placeholder="Describe this location..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="loc-modal-cancel">Cancel</button>
+        <button class="btn btn-purple" id="loc-modal-save" style="color:var(--purple);border-color:var(--purple);">Save Location</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quest Modal -->
+  <div class="modal-overlay" id="quest-modal">
+    <div class="modal">
+      <div class="modal-title" id="quest-modal-title">Add Quest</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Quest Name</label>
+          <input type="text" id="qm-name" placeholder="Find the Lost Artifact">
+        </div>
+        <div class="form-group">
+          <label>Given By</label>
+          <input type="text" id="qm-giver" placeholder="NPC Name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="qm-desc" rows="4" placeholder="Quest objectives and details..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Reward</label>
+        <input type="text" id="qm-reward" placeholder="500 GP, Rare magic item...">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="quest-modal-cancel">Cancel</button>
+        <button class="btn btn-orange" id="quest-modal-save">Save Quest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Journal Entry Modal -->
+  <div class="modal-overlay" id="journal-modal">
+    <div class="modal" style="max-width:640px;">
+      <div class="modal-title" id="journal-modal-title">New Journal Entry</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Entry Title</label>
+          <input type="text" id="jm-title" placeholder="The Night We Found the Map...">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="jm-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Written By</label>
+        <input type="text" id="jm-author" placeholder="Character or player name">
+      </div>
+      <div class="form-group">
+        <label>Entry</label>
+        <textarea id="jm-body" rows="10" placeholder="Write your journal entry here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="journal-modal-cancel">Cancel</button>
+        <button class="btn btn-blue" id="journal-modal-save">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirm modal -->
+  <div class="modal-overlay" id="delete-item-modal">
+    <div class="modal">
+      <div class="modal-title">Confirm Delete</div>
+      <p style="color:var(--text-dim);font-size:14px;" id="delete-item-msg">Delete this item?</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="delete-item-cancel">Cancel</button>
+        <button class="btn btn-red" id="delete-item-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, injectSharedUI, toast, openModal, closeModal, setupModalClose, setupTabs } from './js/ui.js';
+    import { getCampaign, saveCampaign, sendInvite } from './js/campaigns.js';
+    import { auth } from './js/firebase-config.js';
+    import { getDoc, doc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+    import { db } from './js/firebase-config.js';
+
+    const params     = new URLSearchParams(window.location.search);
+    const campaignId = params.get('id');
+    if (!campaignId) window.location.href = 'dashboard.html';
+
+    let camp, currentUser, isOwner;
+
+    (async () => {
+      currentUser = await requireAuth('index.html');
+      injectSharedUI(currentUser);
+      setupTabs('#camp-tabs');
+
+      camp = await getCampaign(campaignId);
+      if (!camp || !camp.members?.includes(currentUser.uid)) {
+        toast('Campaign not found or access denied.', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+        return;
+      }
+      isOwner = camp.ownerId === currentUser.uid;
+      populateCampaignHeader();
+      renderAll();
+      setupSave();
+      setupModals();
+      setupJournal();
+      setupInvite();
+    })();
+
+    // ── Auto-save ─────────────────────────────────────────────────
+    let saveTimer;
+    function setupSave() {
+      ['c-name','c-dmName','c-setting','c-description'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', scheduleSave);
+      });
+    }
+    function scheduleSave() {
+      const ind = document.getElementById('camp-save-indicator');
+      if (ind) { ind.textContent = 'SAVING...'; ind.style.color = 'var(--orange)'; }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        await saveCampaign(campaignId, {
+          name:        document.getElementById('c-name').value,
+          dmName:      document.getElementById('c-dmName').value,
+          setting:     document.getElementById('c-setting').value,
+          description: document.getElementById('c-description').value,
+          sessions:  camp.sessions || [],
+          npcs:      camp.npcs || [],
+          locations: camp.locations || [],
+          quests:    camp.quests || [],
+          journal:   camp.journal || [],
+        });
+        if (ind) { ind.textContent = 'SAVED ✓'; ind.style.color = 'var(--neon)'; }
+        setTimeout(() => { if (ind) ind.textContent = ''; }, 2000);
+      }, 800);
+    }
+
+    async function persistCamp() {
+      await saveCampaign(campaignId, {
+        name:        document.getElementById('c-name').value,
+        dmName:      document.getElementById('c-dmName').value,
+        setting:     document.getElementById('c-setting').value,
+        description: document.getElementById('c-description').value,
+        sessions:  camp.sessions,
+        npcs:      camp.npcs,
+        locations: camp.locations,
+        quests:    camp.quests,
+        journal:   camp.journal || [],
+      });
+    }
+
+    // ── Populate header fields ────────────────────────────────────
+    function populateCampaignHeader() {
+      document.getElementById('c-name').value        = camp.name || '';
+      document.getElementById('c-dmName').value      = camp.dmName || '';
+      document.getElementById('c-setting').value     = camp.setting || '';
+      document.getElementById('c-description').value = camp.description || '';
+      document.title = `NinerSheet // ${camp.name || 'Campaign'}`;
+    }
+
+    // ── Render all tabs ───────────────────────────────────────────
+    function renderAll() {
+      renderMembers();
+      renderStats();
+      renderSessions();
+      renderNPCs();
+      renderLocations();
+      renderQuests();
+      renderJournal();
+    }
+
+    function renderStats() {
+      document.getElementById('stat-sessions').textContent  = (camp.sessions||[]).length;
+      document.getElementById('stat-npcs').textContent      = (camp.npcs||[]).length;
+      document.getElementById('stat-locations').textContent = (camp.locations||[]).length;
+      const activeQ = (camp.quests||[]).filter(q=>!q.completed).length;
+      document.getElementById('stat-quests').textContent    = activeQ;
+    }
+
+    async function renderMembers() {
+      const list = document.getElementById('members-list');
+      list.innerHTML = '';
+      for (const uid of (camp.members || [])) {
+        try {
+          const snap = await getDoc(doc(db, 'users', uid));
+          const name = snap.exists() ? (snap.data().displayName || snap.data().email) : uid;
+          const div  = document.createElement('div');
+          div.className = 'member-item';
+          div.innerHTML = `
+            <div class="member-avatar">${escHtml(name.charAt(0).toUpperCase())}</div>
+            <span>${escHtml(name)}</span>
+            ${uid === camp.ownerId ? '<span class="badge badge-neon" style="margin-left:auto;">DM</span>' : ''}
+          `;
+          list.appendChild(div);
+        } catch {}
+      }
+    }
+
+    // ── Sessions ─────────────────────────────────────────────────
+    function renderSessions() {
+      const list = document.getElementById('sessions-list');
+      list.innerHTML = '';
+      const sessions = [...(camp.sessions||[])].reverse();
+      sessions.forEach((s, ri) => {
+        const i   = (camp.sessions.length - 1) - ri;
+        const div = document.createElement('div');
+        div.className = 'session-card';
+        div.innerHTML = `
+          <div class="session-header">
+            <div>
+              <div class="session-title">${escHtml(s.title||'Untitled Session')}</div>
+              <div class="session-date">${s.date || '—'}</div>
+            </div>
+            <div class="session-actions">
+              <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;" data-edit="${i}">Edit</button>
+              <button class="btn btn-red" style="font-size:10px;padding:5px 10px;" data-del="${i}">Del</button>
+            </div>
+          </div>
+          <div class="session-summary">${escHtml(s.summary||'')}</div>
+          ${s.highlights ? `<div style="margin-top:8px;font-size:12px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:8px;"><span class="text-yellow" style="font-family:var(--font-head);font-size:10px;letter-spacing:0.06em;">HIGHLIGHTS // </span>${escHtml(s.highlights)}</div>` : ''}
+        `;
+        div.querySelector('[data-edit]').addEventListener('click', () => openSessionModal(i));
+        div.querySelector('[data-del]').addEventListener('click', () => confirmDelete('session', i));
+        list.appendChild(div);
+      });
+      if (!sessions.length) list.innerHTML = '<p class="text-dim" style="font-size:13px;padding:20px 0;">No sessions logged yet. Add your first one!</p>';
+    }
+
+    // ── NPCs ──────────────────────────────────────────────────────
+    function renderNPCs() {
+      const tbody = document.getElementById('npcs-body');
+      tbody.innerHTML = '';
+      (camp.npcs||[]).forEach((n, i) => {
+        const attClass = {friendly:'att-friendly',neutral:'att-neutral',hostile:'att-hostile',unknown:'att-unknown'}[n.attitude]||'att-unknown';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escHtml(n.name||'—')}</strong></td>
+          <td class="text-dim">${escHtml(n.race||'—')}</td>
+          <td><span class="npc-attitude ${attClass}">${n.attitude||'unknown'}</span></td>
+          <td style="max-width:260px;font-size:12px;color:var(--text-dim);">${escHtml((n.notes||'').slice(0,80))}${(n.notes||'').length>80?'…':''}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;margin-right:4px;" data-edit="${i}">Edit</button>
+            <button class="btn btn-red" style="font-size:10px;padding:4px 8px;" data-del="${i}">Del</button>
+          </td>
+        `;
+        tr.querySelector('[data-edit]').addEventListener('click', () => openNPCModal(i));
+        tr.querySelector('[data-del]').addEventListener('click', () => confirmDelete('npc', i));
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ── Locations ─────────────────────────────────────────────────
+    function renderLocations() {
+      const grid = document.getElementById('locations-grid');
+      grid.innerHTML = '';
+      (camp.locations||[]).forEach((l, i) => {
+        const card = document.createElement('div');
+        card.className = 'location-card';
+        card.innerHTML = `
+          <button class="item-del-btn" data-del="${i}" title="Delete">✕</button>
+          <div class="location-name">${escHtml(l.name||'—')}</div>
+          <div class="location-type">${escHtml(l.type||'')}</div>
+          <div class="location-desc">${escHtml(l.desc||'')}</div>
+        `;
+        card.querySelector('[data-del]').addEventListener('click', e => { e.stopPropagation(); confirmDelete('location', i); });
+        grid.appendChild(card);
+      });
+      if (!(camp.locations||[]).length) grid.innerHTML = '<p class="text-dim" style="font-size:13px;padding:20px 0;">No locations added yet.</p>';
+    }
+
+    // ── Quests ─────────────────────────────────────────────────────
+    function renderQuests() {
+      const active    = document.getElementById('quests-list');
+      const completed = document.getElementById('quests-completed-list');
+      active.innerHTML = '';
+      completed.innerHTML = '';
+      (camp.quests||[]).forEach((q, i) => {
+        const div = document.createElement('div');
+        div.className = `quest-card${q.completed?' completed':''}`;
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div class="quest-name">${escHtml(q.name||'—')}</div>
+              <div class="quest-meta">From: ${escHtml(q.giver||'Unknown')} ${q.reward ? '· Reward: '+escHtml(q.reward) : ''}</div>
+              <div class="quest-desc">${escHtml(q.desc||'')}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px;">
+              <button class="btn ${q.completed?'btn-ghost':'btn-neon'}" style="font-size:10px;padding:4px 8px;" data-toggle="${i}">${q.completed?'Reopen':'Complete'}</button>
+              <button class="btn btn-red" style="font-size:10px;padding:4px 8px;" data-del="${i}">Del</button>
+            </div>
+          </div>
+        `;
+        div.querySelector('[data-toggle]').addEventListener('click', () => toggleQuest(i));
+        div.querySelector('[data-del]').addEventListener('click', () => confirmDelete('quest', i));
+        if (q.completed) completed.appendChild(div);
+        else active.appendChild(div);
+      });
+    }
+
+    async function toggleQuest(i) {
+      camp.quests[i].completed = !camp.quests[i].completed;
+      renderQuests();
+      renderStats();
+      await persistCamp();
+    }
+
+    // ── Modals ────────────────────────────────────────────────────
+    function setupModals() {
+      ['session-modal','npc-modal','location-modal','quest-modal','delete-item-modal'].forEach(id => setupModalClose(id));
+
+      document.getElementById('add-session-btn').addEventListener('click', () => openSessionModal(null));
+      document.getElementById('session-modal-cancel').addEventListener('click', () => closeModal('session-modal'));
+      document.getElementById('session-modal-save').addEventListener('click', saveSession);
+
+      document.getElementById('add-npc-btn').addEventListener('click', () => openNPCModal(null));
+      document.getElementById('npc-modal-cancel').addEventListener('click', () => closeModal('npc-modal'));
+      document.getElementById('npc-modal-save').addEventListener('click', saveNPC);
+
+      document.getElementById('add-location-btn').addEventListener('click', () => openLocationModal());
+      document.getElementById('loc-modal-cancel').addEventListener('click', () => closeModal('location-modal'));
+      document.getElementById('loc-modal-save').addEventListener('click', saveLocation);
+
+      document.getElementById('add-quest-btn').addEventListener('click', () => openQuestModal());
+      document.getElementById('quest-modal-cancel').addEventListener('click', () => closeModal('quest-modal'));
+      document.getElementById('quest-modal-save').addEventListener('click', saveQuest);
+
+      document.getElementById('delete-item-cancel').addEventListener('click', () => closeModal('delete-item-modal'));
+    }
+
+    let editingSession = null;
+    function openSessionModal(idx) {
+      editingSession = idx;
+      const s = idx !== null ? (camp.sessions[idx] || {}) : {};
+      document.getElementById('session-modal-title').textContent = idx !== null ? 'Edit Session' : 'Add Session';
+      document.getElementById('sm-title').value      = s.title || '';
+      document.getElementById('sm-date').value       = s.date  || '';
+      document.getElementById('sm-summary').value    = s.summary || '';
+      document.getElementById('sm-highlights').value = s.highlights || '';
+      openModal('session-modal');
+    }
+    async function saveSession() {
+      const s = {
+        title:      document.getElementById('sm-title').value.trim(),
+        date:       document.getElementById('sm-date').value,
+        summary:    document.getElementById('sm-summary').value.trim(),
+        highlights: document.getElementById('sm-highlights').value.trim(),
+      };
+      if (!s.title) { toast('Session needs a title.', 'warn'); return; }
+      if (editingSession !== null) camp.sessions[editingSession] = s;
+      else camp.sessions.push(s);
+      closeModal('session-modal');
+      await persistCamp();
+      renderSessions(); renderStats();
+      toast('Session saved.');
+    }
+
+    let editingNPC = null;
+    function openNPCModal(idx) {
+      editingNPC = idx;
+      const n = idx !== null ? (camp.npcs[idx] || {}) : {};
+      document.getElementById('npc-modal-title').textContent = idx !== null ? 'Edit NPC' : 'Add NPC';
+      document.getElementById('nm-name').value     = n.name     || '';
+      document.getElementById('nm-race').value     = n.race     || '';
+      document.getElementById('nm-attitude').value = n.attitude || 'unknown';
+      document.getElementById('nm-desc').value     = n.desc     || '';
+      document.getElementById('nm-notes').value    = n.notes    || '';
+      openModal('npc-modal');
+    }
+    async function saveNPC() {
+      const n = {
+        name:     document.getElementById('nm-name').value.trim(),
+        race:     document.getElementById('nm-race').value.trim(),
+        attitude: document.getElementById('nm-attitude').value,
+        desc:     document.getElementById('nm-desc').value.trim(),
+        notes:    document.getElementById('nm-notes').value.trim(),
+      };
+      if (!n.name) { toast('NPC needs a name.', 'warn'); return; }
+      if (editingNPC !== null) camp.npcs[editingNPC] = n;
+      else camp.npcs.push(n);
+      closeModal('npc-modal');
+      await persistCamp();
+      renderNPCs(); renderStats();
+      toast('NPC saved.');
+    }
+
+    function openLocationModal() {
+      document.getElementById('lm-name').value = '';
+      document.getElementById('lm-type').value = '';
+      document.getElementById('lm-desc').value = '';
+      openModal('location-modal');
+    }
+    async function saveLocation() {
+      const l = {
+        name: document.getElementById('lm-name').value.trim(),
+        type: document.getElementById('lm-type').value.trim(),
+        desc: document.getElementById('lm-desc').value.trim(),
+      };
+      if (!l.name) { toast('Location needs a name.', 'warn'); return; }
+      camp.locations.push(l);
+      closeModal('location-modal');
+      await persistCamp();
+      renderLocations(); renderStats();
+      toast('Location added.');
+    }
+
+    function openQuestModal() {
+      ['qm-name','qm-giver','qm-desc','qm-reward'].forEach(id => document.getElementById(id).value = '');
+      openModal('quest-modal');
+    }
+    async function saveQuest() {
+      const q = {
+        name:      document.getElementById('qm-name').value.trim(),
+        giver:     document.getElementById('qm-giver').value.trim(),
+        desc:      document.getElementById('qm-desc').value.trim(),
+        reward:    document.getElementById('qm-reward').value.trim(),
+        completed: false,
+      };
+      if (!q.name) { toast('Quest needs a name.', 'warn'); return; }
+      camp.quests.push(q);
+      closeModal('quest-modal');
+      await persistCamp();
+      renderQuests(); renderStats();
+      toast('Quest added.');
+    }
+
+    let pendingDelete = null;
+    function confirmDelete(type, idx) {
+      pendingDelete = { type, idx };
+      const labels = { session: 'session', npc: 'NPC', location: 'location', quest: 'quest' };
+      document.getElementById('delete-item-msg').textContent = `Delete this ${labels[type]}? This cannot be undone.`;
+      openModal('delete-item-modal');
+    }
+    document.getElementById('delete-item-confirm').addEventListener('click', async () => {
+      if (!pendingDelete) return;
+      const { type, idx } = pendingDelete;
+      const arrays = { session: 'sessions', npc: 'npcs', location: 'locations', quest: 'quests', journal: 'journal' };
+      camp[arrays[type]].splice(idx, 1);
+      closeModal('delete-item-modal');
+      await persistCamp();
+      renderAll();
+      toast('Deleted.', 'warn');
+      pendingDelete = null;
+    });
+
+    // ── Journal ───────────────────────────────────────────────────
+    let editingJournal = null;
+
+    function renderJournal() {
+      const list = document.getElementById('journal-list');
+      list.innerHTML = '';
+      const entries = [...(camp.journal || [])].reverse();
+      if (!entries.length) {
+        list.innerHTML = '<p class="text-dim" style="font-size:13px;padding:20px 0;">No journal entries yet. Write your first one!</p>';
+        return;
+      }
+      entries.forEach((e, ri) => {
+        const i   = (camp.journal.length - 1) - ri;
+        const div = document.createElement('div');
+        div.className = 'journal-entry';
+        div.innerHTML = `
+          <div class="journal-entry-header">
+            <div>
+              <div class="journal-entry-title">${escHtml(e.title || 'Untitled Entry')}</div>
+              <div class="journal-entry-meta">${e.date || '—'} ${e.author ? '· by ' + escHtml(e.author) : ''}</div>
+            </div>
+            <div class="journal-actions">
+              <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;" data-edit="${i}">Edit</button>
+              <button class="btn btn-red" style="font-size:10px;padding:4px 8px;" data-del="${i}">Del</button>
+            </div>
+          </div>
+          <div class="journal-entry-body">${escHtml(e.body || '')}</div>
+        `;
+        div.querySelector('[data-edit]').addEventListener('click', () => openJournalModal(i));
+        div.querySelector('[data-del]').addEventListener('click', () => confirmDelete('journal', i));
+        list.appendChild(div);
+      });
+    }
+
+    function openJournalModal(idx) {
+      editingJournal = idx;
+      const e = idx !== null ? (camp.journal[idx] || {}) : {};
+      document.getElementById('journal-modal-title').textContent = idx !== null ? 'Edit Journal Entry' : 'New Journal Entry';
+      document.getElementById('jm-title').value  = e.title  || '';
+      document.getElementById('jm-date').value   = e.date   || new Date().toISOString().slice(0,10);
+      document.getElementById('jm-author').value = e.author || (currentUser.displayName || '');
+      document.getElementById('jm-body').value   = e.body   || '';
+      openModal('journal-modal');
+    }
+
+    async function saveJournalEntry() {
+      const e = {
+        title:  document.getElementById('jm-title').value.trim(),
+        date:   document.getElementById('jm-date').value,
+        author: document.getElementById('jm-author').value.trim(),
+        body:   document.getElementById('jm-body').value.trim(),
+      };
+      if (!e.title) { toast('Entry needs a title.', 'warn'); return; }
+      if (!camp.journal) camp.journal = [];
+      if (editingJournal !== null) camp.journal[editingJournal] = e;
+      else camp.journal.push(e);
+      closeModal('journal-modal');
+      await persistCamp();
+      renderJournal();
+      toast('Journal entry saved.');
+    }
+
+    function setupJournal() {
+      setupModalClose('journal-modal');
+      document.getElementById('add-journal-btn').addEventListener('click', () => openJournalModal(null));
+      document.getElementById('journal-modal-cancel').addEventListener('click', () => closeModal('journal-modal'));
+      document.getElementById('journal-modal-save').addEventListener('click', saveJournalEntry);
+    }
+
+    // ── Invite ────────────────────────────────────────────────────
+    function setupInvite() {
+      document.getElementById('send-invite-btn').addEventListener('click', async () => {
+        const email = document.getElementById('invite-email').value.trim();
+        if (!email) { toast('Enter an email address.', 'warn'); return; }
+        if (email.toLowerCase() === currentUser.email.toLowerCase()) {
+          toast("You can't invite yourself.", 'warn'); return;
+        }
+        try {
+          await sendInvite(campaignId, camp.name, email, currentUser.displayName || currentUser.email);
+          toast(`Invite sent to ${email}!`);
+          document.getElementById('invite-email').value = '';
+        } catch (err) {
+          toast(err.message || 'Failed to send invite.', 'error');
+        }
+      });
+    }
+
+    function escHtml(str) {
+      return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+
+</body>
+</html>

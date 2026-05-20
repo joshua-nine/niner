@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NinerSheet // Enter the Dungeon</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .hero-logo {
+      font-family: var(--font-head);
+      font-size: clamp(28px, 6vw, 52px);
+      font-weight: 900;
+      color: var(--neon);
+      text-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 40px rgba(0,255,136,0.2);
+      letter-spacing: 0.12em;
+      line-height: 1.1;
+    }
+    .hero-logo .bracket { color: var(--orange); }
+    .hero-sub {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      margin-top: 10px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--neon);
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: 0 0 40px rgba(0,255,136,0.15);
+    }
+    .auth-title {
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neon);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 24px;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .auth-footer a {
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    .login-submit {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="toast-container"></div>
+
+  <div class="hero">
+    <div class="hero-logo">
+      <span class="bracket">[</span>NINER<span class="bracket">]</span>SHEET
+    </div>
+    <div class="hero-sub">// D&D 5E CHARACTER TRACKER & CAMPAIGN LOG //</div>
+  </div>
+
+  <!-- Login -->
+  <div class="auth-card" id="login-section">
+    <div class="auth-title">// Access Terminal</div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-email">Email Address</label>
+        <input type="email" id="login-email" placeholder="adventurer@realm.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-neon login-submit">ENTER THE DUNGEON</button>
+    </form>
+    <div class="auth-footer">
+      New adventurer? <a href="#" id="show-register">Create an account</a>
+    </div>
+  </div>
+
+  <!-- Register -->
+  <div class="auth-card hidden" id="register-section">
+    <div class="auth-title">// Create Your Character</div>
+    <form id="register-form">
+      <div class="form-group">
+        <label for="reg-username">Adventurer Name</label>
+        <input type="text" id="reg-username" placeholder="ThorkellIronbones" required maxlength="30">
+      </div>
+      <div class="form-group">
+        <label for="reg-email">Email Address</label>
+        <input type="email" id="reg-email" placeholder="adventurer@realm.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" placeholder="6+ characters" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label for="reg-confirm">Confirm Password</label>
+        <input type="password" id="reg-confirm" placeholder="••••••••" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-neon login-submit">CREATE ACCOUNT</button>
+    </form>
+    <div class="auth-footer">
+      Already have an account? <a href="#" id="show-login">Sign in</a>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
