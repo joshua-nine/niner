@@ -48,6 +48,7 @@
       <button class="tab-btn" data-tab="tab-npcs">NPCs</button>
       <button class="tab-btn" data-tab="tab-locations">Locations</button>
       <button class="tab-btn" data-tab="tab-quests">Quests</button>
+      <button class="tab-btn" data-tab="tab-journal">Journal</button>
       <button class="tab-btn" data-tab="tab-invite">Invite</button>
     </div>
 
@@ -123,6 +124,16 @@
       <div id="quests-list"></div>
       <div class="section-title mt-2 mb-1" style="opacity:0.6;">Completed Quests</div>
       <div id="quests-completed-list"></div>
+    </div>
+
+    <!-- Journal -->
+    <div class="tab-pane" id="tab-journal">
+      <div class="section-header">
+        <span class="section-title">Campaign Journal</span>
+        <button class="btn btn-blue" id="add-journal-btn" style="font-size:11px;padding:7px 14px;">+ New Entry</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">A shared log for the whole party — record lore, discoveries, decisions, and anything worth remembering.</p>
+      <div id="journal-list"></div>
     </div>
 
     <!-- Invite -->
@@ -261,6 +272,35 @@
     </div>
   </div>
 
+  <!-- Journal Entry Modal -->
+  <div class="modal-overlay" id="journal-modal">
+    <div class="modal" style="max-width:640px;">
+      <div class="modal-title" id="journal-modal-title">New Journal Entry</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Entry Title</label>
+          <input type="text" id="jm-title" placeholder="The Night We Found the Map...">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="jm-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Written By</label>
+        <input type="text" id="jm-author" placeholder="Character or player name">
+      </div>
+      <div class="form-group">
+        <label>Entry</label>
+        <textarea id="jm-body" rows="10" placeholder="Write your journal entry here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="journal-modal-cancel">Cancel</button>
+        <button class="btn btn-blue" id="journal-modal-save">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete confirm modal -->
   <div class="modal-overlay" id="delete-item-modal">
     <div class="modal">
@@ -302,6 +342,7 @@
       renderAll();
       setupSave();
       setupModals();
+      setupJournal();
       setupInvite();
     })();
 
@@ -326,6 +367,7 @@
           npcs:      camp.npcs || [],
           locations: camp.locations || [],
           quests:    camp.quests || [],
+          journal:   camp.journal || [],
         });
         if (ind) { ind.textContent = 'SAVED ✓'; ind.style.color = 'var(--neon)'; }
         setTimeout(() => { if (ind) ind.textContent = ''; }, 2000);
@@ -342,6 +384,7 @@
         npcs:      camp.npcs,
         locations: camp.locations,
         quests:    camp.quests,
+        journal:   camp.journal || [],
       });
     }
 
@@ -362,6 +405,7 @@
       renderNPCs();
       renderLocations();
       renderQuests();
+      renderJournal();
     }
 
     function renderStats() {
@@ -628,7 +672,7 @@
     document.getElementById('delete-item-confirm').addEventListener('click', async () => {
       if (!pendingDelete) return;
       const { type, idx } = pendingDelete;
-      const arrays = { session: 'sessions', npc: 'npcs', location: 'locations', quest: 'quests' };
+      const arrays = { session: 'sessions', npc: 'npcs', location: 'locations', quest: 'quests', journal: 'journal' };
       camp[arrays[type]].splice(idx, 1);
       closeModal('delete-item-modal');
       await persistCamp();
@@ -636,6 +680,75 @@
       toast('Deleted.', 'warn');
       pendingDelete = null;
     });
+
+    // ── Journal ───────────────────────────────────────────────────
+    let editingJournal = null;
+
+    function renderJournal() {
+      const list = document.getElementById('journal-list');
+      list.innerHTML = '';
+      const entries = [...(camp.journal || [])].reverse();
+      if (!entries.length) {
+        list.innerHTML = '<p class="text-dim" style="font-size:13px;padding:20px 0;">No journal entries yet. Write your first one!</p>';
+        return;
+      }
+      entries.forEach((e, ri) => {
+        const i   = (camp.journal.length - 1) - ri;
+        const div = document.createElement('div');
+        div.className = 'journal-entry';
+        div.innerHTML = `
+          <div class="journal-entry-header">
+            <div>
+              <div class="journal-entry-title">${escHtml(e.title || 'Untitled Entry')}</div>
+              <div class="journal-entry-meta">${e.date || '—'} ${e.author ? '· by ' + escHtml(e.author) : ''}</div>
+            </div>
+            <div class="journal-actions">
+              <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;" data-edit="${i}">Edit</button>
+              <button class="btn btn-red" style="font-size:10px;padding:4px 8px;" data-del="${i}">Del</button>
+            </div>
+          </div>
+          <div class="journal-entry-body">${escHtml(e.body || '')}</div>
+        `;
+        div.querySelector('[data-edit]').addEventListener('click', () => openJournalModal(i));
+        div.querySelector('[data-del]').addEventListener('click', () => confirmDelete('journal', i));
+        list.appendChild(div);
+      });
+    }
+
+    function openJournalModal(idx) {
+      editingJournal = idx;
+      const e = idx !== null ? (camp.journal[idx] || {}) : {};
+      document.getElementById('journal-modal-title').textContent = idx !== null ? 'Edit Journal Entry' : 'New Journal Entry';
+      document.getElementById('jm-title').value  = e.title  || '';
+      document.getElementById('jm-date').value   = e.date   || new Date().toISOString().slice(0,10);
+      document.getElementById('jm-author').value = e.author || (currentUser.displayName || '');
+      document.getElementById('jm-body').value   = e.body   || '';
+      openModal('journal-modal');
+    }
+
+    async function saveJournalEntry() {
+      const e = {
+        title:  document.getElementById('jm-title').value.trim(),
+        date:   document.getElementById('jm-date').value,
+        author: document.getElementById('jm-author').value.trim(),
+        body:   document.getElementById('jm-body').value.trim(),
+      };
+      if (!e.title) { toast('Entry needs a title.', 'warn'); return; }
+      if (!camp.journal) camp.journal = [];
+      if (editingJournal !== null) camp.journal[editingJournal] = e;
+      else camp.journal.push(e);
+      closeModal('journal-modal');
+      await persistCamp();
+      renderJournal();
+      toast('Journal entry saved.');
+    }
+
+    function setupJournal() {
+      setupModalClose('journal-modal');
+      document.getElementById('add-journal-btn').addEventListener('click', () => openJournalModal(null));
+      document.getElementById('journal-modal-cancel').addEventListener('click', () => closeModal('journal-modal'));
+      document.getElementById('journal-modal-save').addEventListener('click', saveJournalEntry);
+    }
 
     // ── Invite ────────────────────────────────────────────────────
     function setupInvite() {
