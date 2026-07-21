@@ -1,0 +1,4 @@
+filer_name,body,ticker,transaction_date,disclosure_date,transaction_type,amount_range_low,amount_range_high,source_url
+Jane Doe,house,AAPL,2021-01-04,2021-01-20,purchase,1001,15000,https://disclosures-clerk.house.gov/example/1
+John Roe,house,MSFT,2021-02-01,2021-02-16,sale,15001,50000,https://disclosures-clerk.house.gov/example/2
+Ann Lee,house,GOOG,2021-03-10,2021-03-25,purchase,50001,100000,https://disclosures-clerk.house.gov/example/3

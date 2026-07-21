@@ -7,6 +7,7 @@ ticker has no price history by checking the on-disk price cache, so that
 cache has to be populated first.
 """
 
+import argparse
 import logging
 from datetime import date, timedelta
 
@@ -36,8 +37,13 @@ def _spy_total_return(benchmark_prices, start_date, end_date):
     return total_return, first, last
 
 
-def run_pipeline():
+def run_pipeline(sample=False):
     """Run all pipeline stages in order and produce the final study outputs.
+
+    When `sample` is True, filings are loaded and validated from the
+    hand-authored sample CSV (data/sample/filings_sample.csv) instead of
+    calling the fetcher. Everything downstream -- cleaning, prices, returns,
+    aggregation, report -- runs unchanged.
 
     Returns (csv_path, md_path) for the written reports.
     """
@@ -49,10 +55,15 @@ def run_pipeline():
 
     session = requests.Session()
 
-    # 1. Fetch and normalize filings.
-    raw_filings = fetch_filings.fetch_raw_filings(session=session)
-    filings_pulled = len(raw_filings)
-    normalized = fetch_filings.normalize_filings(raw_filings)
+    # 1. Load filings -- from the validated sample CSV, or from the fetcher.
+    if sample:
+        normalized = fetch_filings.load_sample_filings()
+        filings_pulled = len(normalized)
+        logger.info("Sample mode: loaded %d validated sample filings", filings_pulled)
+    else:
+        raw_filings = fetch_filings.fetch_raw_filings(session=session)
+        filings_pulled = len(raw_filings)
+        normalized = fetch_filings.normalize_filings(raw_filings)
     fetch_filings.save_normalized_filings(normalized)
     logger.info("Pulled %d filings; %d normalized trades in range", filings_pulled, len(normalized))
 
@@ -107,8 +118,17 @@ def run_pipeline():
 
 def main():
     """CLI entry point for running the pipeline."""
+    parser = argparse.ArgumentParser(description="Run the disclosure-study pipeline.")
+    parser.add_argument(
+        "--sample",
+        action="store_true",
+        help="Run on the hand-authored sample CSV (data/sample/filings_sample.csv) "
+        "instead of calling the fetcher.",
+    )
+    args = parser.parse_args()
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    csv_path, md_path = run_pipeline()
+    csv_path, md_path = run_pipeline(sample=args.sample)
     print(f"\nResults written to:\n  {csv_path}\n  {md_path}")
 
 

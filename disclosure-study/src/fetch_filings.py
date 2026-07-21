@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 RAW_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 NORMALIZED_TRADES_PATH = RAW_DATA_DIR / "normalized_trades.csv"
 
+# Hand-checkable sample used to run the whole pipeline before the real fetcher
+# exists. Same columns as the normalized data model (see FIELDNAMES).
+SAMPLE_FILINGS_PATH = Path(__file__).resolve().parent.parent / "data" / "sample" / "filings_sample.csv"
+
 FIELDNAMES = [
     "filer_name",
     "body",
@@ -42,6 +46,11 @@ FIELDNAMES = [
     "amount_range_high",
     "source_url",
 ]
+
+# Canonical transaction_type values accepted in a sample file. These match the
+# normalized values produced by _normalize_transaction_type; cleaning keeps
+# only "purchase".
+KNOWN_TRANSACTION_TYPES = {"purchase", "sale", "exchange"}
 
 # Raw "type" values from the source filings, normalized to these canonical values.
 _TRANSACTION_TYPE_MAP = {
@@ -225,6 +234,114 @@ def save_normalized_filings(rows, destination=NORMALIZED_TRADES_PATH):
                     serialized[date_field] = value.isoformat()
             writer.writerow(serialized)
     return destination
+
+
+class SampleValidationError(ValueError):
+    """Raised when a sample filings CSV row fails validation. The message
+    always names the offending file line so it can be hand-corrected."""
+
+
+def _parse_iso_date(value, line_num, field):
+    """Parse a strict ISO (YYYY-MM-DD) date, or raise SampleValidationError.
+
+    date.fromisoformat also accepts other separators on some Python versions,
+    so the exact 10-char YYYY-MM-DD shape is enforced explicitly -- the sample
+    is a template and should model the canonical format, not be coerced.
+    """
+    value = (value or "").strip()
+    if len(value) != 10 or value[4] != "-" or value[7] != "-":
+        raise SampleValidationError(
+            f"line {line_num}: {field} '{value}' is not ISO format YYYY-MM-DD"
+        )
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise SampleValidationError(
+            f"line {line_num}: {field} '{value}' is not a valid date"
+        )
+
+
+def _parse_amount(value, line_num, field):
+    """Parse a required numeric amount, or raise SampleValidationError."""
+    value = (value or "").strip()
+    if value == "":
+        raise SampleValidationError(f"line {line_num}: {field} is empty")
+    try:
+        return float(value)
+    except ValueError:
+        raise SampleValidationError(
+            f"line {line_num}: {field} '{value}' is not a number"
+        )
+
+
+def load_sample_filings(path=SAMPLE_FILINGS_PATH):
+    """Load and validate a hand-authored sample filings CSV, returning
+    normalized trade rows (dates as date objects, amounts as floats) in the
+    same shape as normalize_filings().
+
+    Validation is strict and fails loudly with the offending file line number,
+    never silently coercing:
+      - every data-model column must be present in the header
+      - transaction_date and disclosure_date must be parseable ISO (YYYY-MM-DD)
+      - transaction_type must be in KNOWN_TRANSACTION_TYPES
+      - amount_range_low <= amount_range_high, both numeric
+    """
+    path = Path(path)
+    if not path.exists():
+        raise SampleValidationError(f"sample file not found: {path}")
+
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+
+        header = reader.fieldnames or []
+        missing = [c for c in FIELDNAMES if c not in header]
+        if missing:
+            raise SampleValidationError(
+                f"line 1: missing required column(s): {', '.join(missing)}"
+            )
+
+        rows = []
+        for raw in reader:
+            line_num = reader.line_num  # 1-based file line, header is line 1
+
+            transaction_date = _parse_iso_date(
+                raw.get("transaction_date"), line_num, "transaction_date"
+            )
+            disclosure_date = _parse_iso_date(
+                raw.get("disclosure_date"), line_num, "disclosure_date"
+            )
+
+            transaction_type = (raw.get("transaction_type") or "").strip()
+            if transaction_type not in KNOWN_TRANSACTION_TYPES:
+                raise SampleValidationError(
+                    f"line {line_num}: transaction_type '{transaction_type}' not in "
+                    f"{sorted(KNOWN_TRANSACTION_TYPES)}"
+                )
+
+            amount_low = _parse_amount(raw.get("amount_range_low"), line_num, "amount_range_low")
+            amount_high = _parse_amount(raw.get("amount_range_high"), line_num, "amount_range_high")
+            if amount_low > amount_high:
+                raise SampleValidationError(
+                    f"line {line_num}: amount_range_low ({amount_low}) > "
+                    f"amount_range_high ({amount_high})"
+                )
+
+            rows.append(
+                {
+                    "filer_name": (raw.get("filer_name") or "").strip(),
+                    "body": (raw.get("body") or "").strip(),
+                    "ticker": (raw.get("ticker") or "").strip().upper(),
+                    "transaction_date": transaction_date,
+                    "disclosure_date": disclosure_date,
+                    "transaction_type": transaction_type,
+                    "amount_range_low": amount_low,
+                    "amount_range_high": amount_high,
+                    "source_url": (raw.get("source_url") or "").strip(),
+                }
+            )
+
+    logger.info("Loaded %d validated sample filing rows from %s", len(rows), path)
+    return rows
 
 
 def main():
