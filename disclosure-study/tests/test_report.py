@@ -131,3 +131,61 @@ def test_write_summary_markdown_handles_empty_filer_split(tmp_path):
     text = dest.read_text()
 
     assert "No filer met the minimum" in text
+
+
+def test_missing_provenance_shows_message_not_zero_table(tmp_path):
+    """When provenance is unavailable (standalone render), the cleaning
+    section must state so plainly and must NOT print a table of zeros, which
+    would read as a real 'nothing was removed' finding."""
+    dest = tmp_path / "results.md"
+
+    summary = make_study_summary()
+    summary["clean_summary"] = None
+    summary["filings_pulled"] = None
+    summary["tickers_no_price"] = None
+
+    write_summary_markdown(summary, make_aggregates(), dest)
+    text = dest.read_text()
+
+    # The unavailable message is present, ahead of the aggregate tables.
+    assert "Provenance unavailable" in text
+    assert text.index("Provenance unavailable") < text.index("## Overall")
+
+    # No cleaning-funnel table (of zeros or otherwise) appears.
+    assert "Rows removed by each cleaning rule" not in text
+    # None of the funnel lines appear at all in the fully-unavailable case.
+    assert " | 0 |" not in text
+    assert "**Trades after cleaning:**" not in text
+    assert "**Filings pulled from source:**" not in text
+    assert "**Distinct tickers with no price data" not in text
+
+    # The report still renders the real aggregate tables around it.
+    assert "## Overall" in text
+    assert "+2.50%" in text
+
+
+def test_partial_provenance_shows_unavailable_for_missing_counts(tmp_path):
+    """If the cleaning funnel exists but filings_pulled / tickers_no_price are
+    missing, those two fields must render as 'unavailable', not as a number."""
+    dest = tmp_path / "results.md"
+
+    summary = make_study_summary()
+    summary["filings_pulled"] = None
+    summary["tickers_no_price"] = None
+
+    write_summary_markdown(summary, make_aggregates(), dest)
+    text = dest.read_text()
+
+    assert "**Filings pulled from source:** unavailable" in text
+    assert "no price data (delisted / acquired / unmatched):** unavailable" in text
+    # The real cleaning funnel (from clean_summary) still prints.
+    assert "Rows removed by each cleaning rule" in text
+    assert "425" in text  # rows_out is a real value, still shown
+
+
+def test_fmt_count_uses_unavailable_for_none():
+    from src.report import _fmt_count
+
+    assert _fmt_count(None) == "unavailable"
+    assert _fmt_count(0) == "0"
+    assert _fmt_count(1000) == "1,000"

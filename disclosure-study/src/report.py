@@ -50,6 +50,15 @@ def _fmt_rate(value):
     return f"{value * 100:.1f}%"
 
 
+def _fmt_count(value):
+    """Format an integer count with thousands separators, or 'unavailable'
+    when the value is missing (None). Never coerce a missing count to 0 --
+    'unavailable' reads as missing data, '0' reads as a real finding."""
+    if value is None:
+        return "unavailable"
+    return f"{value:,}"
+
+
 def _sorted_windows(aggregate):
     """Return the distinct window_days present in an aggregate view, sorted."""
     return sorted({window for (window, _anchor) in aggregate})
@@ -135,7 +144,7 @@ def _render_aggregate_table(aggregate):
 def _render_header(study_summary):
     """Render the leading provenance/cleaning block of the markdown report."""
     s = study_summary
-    clean = s["clean_summary"]
+    clean = s.get("clean_summary")
 
     lines = [
         "# Disclosure Study Results",
@@ -150,28 +159,43 @@ def _render_header(study_summary):
         "",
         "## Data provenance and cleaning",
         "",
-        f"- **Filings pulled from source:** {s['filings_pulled']:,}",
-        f"- **Trades entering cleaning (in date range):** {clean['rows_in']:,}",
-        "",
-        "Rows removed by each cleaning rule:",
-        "",
-        "| Rule | Rows removed |",
-        "|---|---|",
-        f"| Not a purchase (sells, exchanges) | {clean['dropped_non_purchase']:,} |",
-        f"| Duplicate (same filer + ticker + transaction date) | {clean['dropped_duplicate']:,} |",
-        f"| Missing / unparseable ticker | {clean['dropped_bad_ticker']:,} |",
-        f"| Disclosure date before transaction date | {clean['dropped_bad_date_order']:,} |",
-        "",
-        f"- **Trades after cleaning:** {clean['rows_out']:,}",
-        f"- **Rows flagged with no price history (kept, not dropped):** "
-        f"{clean['flagged_no_price_history']:,}",
-        f"- **Distinct tickers with no price data (delisted / acquired / unmatched):** "
-        f"{s['tickers_no_price']:,}",
-        "",
-        "> Tickers with no price history are flagged and **kept**, not dropped. "
-        "Dropping them would bias results upward, since companies that were "
-        "acquired or delisted are disproportionately excluded otherwise. Their "
-        "trades still appear in the counts but contribute null returns.",
+    ]
+
+    if clean is None:
+        # No real cleaning funnel available (e.g. standalone re-render from the
+        # returns file). Print a plain statement rather than a table of zeros,
+        # which would read as a real "0 rows removed" finding.
+        lines.append(
+            "Provenance unavailable — this report was rendered standalone from "
+            "returns data. Run via main.py for the full cleaning funnel."
+        )
+    else:
+        lines.extend([
+            f"- **Filings pulled from source:** {_fmt_count(s.get('filings_pulled'))}",
+            f"- **Trades entering cleaning (in date range):** {clean['rows_in']:,}",
+            "",
+            "Rows removed by each cleaning rule:",
+            "",
+            "| Rule | Rows removed |",
+            "|---|---|",
+            f"| Not a purchase (sells, exchanges) | {clean['dropped_non_purchase']:,} |",
+            f"| Duplicate (same filer + ticker + transaction date) | {clean['dropped_duplicate']:,} |",
+            f"| Missing / unparseable ticker | {clean['dropped_bad_ticker']:,} |",
+            f"| Disclosure date before transaction date | {clean['dropped_bad_date_order']:,} |",
+            "",
+            f"- **Trades after cleaning:** {clean['rows_out']:,}",
+            f"- **Rows flagged with no price history (kept, not dropped):** "
+            f"{clean['flagged_no_price_history']:,}",
+            f"- **Distinct tickers with no price data (delisted / acquired / unmatched):** "
+            f"{_fmt_count(s.get('tickers_no_price'))}",
+            "",
+            "> Tickers with no price history are flagged and **kept**, not dropped. "
+            "Dropping them would bias results upward, since companies that were "
+            "acquired or delisted are disproportionately excluded otherwise. Their "
+            "trades still appear in the counts but contribute null returns.",
+        ])
+
+    lines.extend([
         "",
         "## Market context",
         "",
@@ -182,7 +206,7 @@ def _render_header(study_summary):
         "window for each trade, not against this single period figure — this "
         "number is context only.",
         "",
-    ]
+    ])
     return "\n".join(lines)
 
 
@@ -299,23 +323,19 @@ def main():
         "by_body": aggregate_by_body(returns),
         "by_filer": aggregate_by_filer(returns),
     }
+    # Provenance (filings pulled, the cleaning funnel, tickers with no price
+    # data) can't be reconstructed from post-cleaning returns data, so mark it
+    # unavailable rather than fabricating zeros that would read as real
+    # findings. main.py threads the real values through from the cleaning step.
     study_summary = {
         "start_date": START_DATE,
         "end_date": END_DATE,
         "body": BODY,
         "windows": HOLDING_WINDOWS,
         "min_trades_per_filer": MIN_TRADES_PER_FILER,
-        "filings_pulled": len({(r["filer_name"], r["ticker"], r["transaction_date"]) for r in returns}),
-        "clean_summary": {
-            "rows_in": 0,
-            "dropped_non_purchase": 0,
-            "dropped_duplicate": 0,
-            "dropped_bad_ticker": 0,
-            "dropped_bad_date_order": 0,
-            "flagged_no_price_history": 0,
-            "rows_out": len({(r["filer_name"], r["ticker"], r["transaction_date"]) for r in returns}),
-        },
-        "tickers_no_price": 0,
+        "filings_pulled": None,
+        "clean_summary": None,
+        "tickers_no_price": None,
         "spy_total_return": None,
         "spy_start_date": "n/a",
         "spy_end_date": "n/a",
