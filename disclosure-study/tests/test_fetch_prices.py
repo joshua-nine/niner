@@ -1,7 +1,8 @@
 """Tests for src/fetch_prices.py."""
 
-import json
 from datetime import date
+
+import pytest
 
 from src.fetch_prices import (
     _yahoo_symbol,
@@ -27,12 +28,17 @@ class FakeResponse:
 
 
 class FakeSession:
-    def __init__(self, response):
+    def __init__(self, response=None, responses=None):
+        # Either a single response (returned every call) or a queue of
+        # responses returned in order (for retry tests).
         self._response = response
+        self._responses = list(responses) if responses else None
         self.calls = []
 
     def get(self, url, params=None, headers=None, timeout=None):
         self.calls.append((url, params))
+        if self._responses is not None:
+            return self._responses.pop(0)
         return self._response
 
 
@@ -94,6 +100,41 @@ def test_download_prices_returns_empty_on_404():
     prices = download_prices("NOTATICKER", date(2021, 1, 4), date(2021, 1, 5), session=session)
 
     assert prices == {}
+
+
+def test_download_prices_retries_transient_400_then_succeeds(monkeypatch):
+    monkeypatch.setattr("src.fetch_prices.time.sleep", lambda _s: None)
+    payload = chart_payload([1609770600], [130.0])
+    session = FakeSession(
+        responses=[FakeResponse(400), FakeResponse(200, payload)]
+    )
+
+    prices = download_prices("GOOG", date(2021, 1, 4), date(2021, 1, 4), session=session)
+
+    assert prices == {date(2021, 1, 4): 130.0}
+    assert len(session.calls) == 2  # one retry
+
+
+def test_download_prices_does_not_retry_404(monkeypatch):
+    monkeypatch.setattr("src.fetch_prices.time.sleep", lambda _s: None)
+    session = FakeSession(
+        responses=[FakeResponse(404, {"chart": {"result": None}}), FakeResponse(200)]
+    )
+
+    prices = download_prices("NOTATICKER", date(2021, 1, 4), date(2021, 1, 4), session=session)
+
+    assert prices == {}
+    assert len(session.calls) == 1  # 404 is definitive, no retry
+
+
+def test_download_prices_raises_after_exhausting_retries(monkeypatch):
+    monkeypatch.setattr("src.fetch_prices.time.sleep", lambda _s: None)
+    session = FakeSession(response=FakeResponse(429))
+
+    with pytest.raises(RuntimeError):
+        download_prices("AAPL", date(2021, 1, 4), date(2021, 1, 4), session=session)
+
+    assert len(session.calls) == 3  # MAX_RETRIES attempts
 
 
 def test_get_prices_uses_cache_without_hitting_network(tmp_path, monkeypatch):

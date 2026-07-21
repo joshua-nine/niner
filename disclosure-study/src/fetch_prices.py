@@ -25,6 +25,12 @@ CHART_URL_TEMPLATE = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}
 REQUEST_DELAY_SECONDS = 1.0
 _HEADERS = {"User-Agent": "disclosure-study research script"}
 
+# The chart API returns spurious 400s and rate-limit 429s under load; these are
+# transient and worth retrying. 404 means "no data for this symbol" and is NOT
+# retried -- it's handled as a definitive empty result.
+MAX_RETRIES = 3
+_RETRYABLE_STATUS = {400, 429, 500, 502, 503, 504}
+
 # Tracks when the last HTTP request went out, so requests stay spaced apart
 # even across repeated calls within a process.
 _last_request_time = 0.0
@@ -82,10 +88,21 @@ def download_prices(ticker, start_date, end_date, session=None):
         "interval": "1d",
     }
 
-    response = _rate_limited_get(session, url, params)
-    if response.status_code == 404:
-        logger.warning("No price data for ticker=%s (possibly delisted/acquired)", ticker)
-        return {}
+    response = None
+    for attempt in range(MAX_RETRIES):
+        response = _rate_limited_get(session, url, params)
+        if response.status_code == 404:
+            logger.warning("No price data for ticker=%s (possibly delisted/acquired)", ticker)
+            return {}
+        if response.status_code in _RETRYABLE_STATUS and attempt < MAX_RETRIES - 1:
+            backoff = 2 ** attempt
+            logger.warning(
+                "ticker=%s got HTTP %d, retrying in %ds (attempt %d/%d)",
+                ticker, response.status_code, backoff, attempt + 1, MAX_RETRIES,
+            )
+            time.sleep(backoff)
+            continue
+        break
     response.raise_for_status()
 
     result = (response.json().get("chart") or {}).get("result")

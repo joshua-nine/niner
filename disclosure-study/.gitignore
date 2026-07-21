@@ -3,6 +3,9 @@ data/raw/*
 data/prices/*
 !data/raw/.gitkeep
 !data/prices/.gitkeep
+# Generated pipeline outputs.
+data/results.csv
+data/results.md
 __pycache__/
 *.pyc
 .pytest_cache/
