@@ -106,7 +106,7 @@ service cloud.firestore {
 
 - **Pre-made floors:** `+ New floor` → **📦 Pre-made floors** adds a ready-to-run floor with Quests, Mobs and Bosses: The Root Cellar (1), The Brass Bazaar (2), Neon Noodle District (3), The Iron Undertow (4).
 - **Test mode:** open `floor-builder.html?test=1` (or **🧪 Test tools → Enter test mode**). "Fill with sample data" builds two test floors, *The Sandbox* (Floor 1) and *The Gauntlet* (Floor 3), plus three test crawlers.
-- **Saving:** outside claude.ai there's no cloud save, so floors and sheets save to this browser's local storage. Use **Back up** / export to move data between devices. The live, cloud-synced version is the claude.ai artifact.
+- **Saving:** outside claude.ai there's no cloud save, so floors and sheets save to this browser's local storage. Use **Export backup** to save a copy (the Google Drive backup button only works on claude.ai). The live, cloud-synced version is the claude.ai artifact.
 
 ---
 
