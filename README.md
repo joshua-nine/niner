@@ -100,6 +100,16 @@ service cloud.firestore {
 
 ---
 
+## Crawl Floor Builder
+
+`floor-builder.html` is a standalone copy of the Crawl Floor Builder (floors, quests, Mob Forge, encounters, combat, sheets). It's one self-contained file: open it in a browser (or serve the folder as above).
+
+- **Pre-made floors:** `+ New floor` → **📦 Pre-made floors** adds a ready-to-run floor with Quests, Mobs and Bosses: The Root Cellar (1), The Brass Bazaar (2), Neon Noodle District (3), The Iron Undertow (4).
+- **Test mode:** open `floor-builder.html?test=1` (or **🧪 Test tools → Enter test mode**). "Fill with sample data" builds two test floors, *The Sandbox* (Floor 1) and *The Gauntlet* (Floor 3), plus three test crawlers.
+- **Saving:** outside claude.ai there's no cloud save, so floors and sheets save to this browser's local storage. Use **Back up** / export to move data between devices. The live, cloud-synced version is the claude.ai artifact.
+
+---
+
 ## File Structure
 
 ```
@@ -108,6 +118,7 @@ niner/
 ├── dashboard.html      Character & Campaign overview
 ├── character.html      Full 5e character sheet
 ├── campaign.html       Campaign tracker
+├── floor-builder.html  Crawl Floor Builder (standalone, see below)
 ├── css/
 │   ├── theme.css       Global DCC-themed styles
 │   ├── dashboard.css
