@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Village</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&family=Exo+2:wght@400;600&display=swap">
+  <link rel="stylesheet" href="village.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="bracket">[</span>AGENT<span class="bracket">]</span> VILLAGE</div>
+    <div class="top-stats">
+      <span id="clock" class="stat"></span>
+      <span id="mode" class="stat pill"></span>
+      <span id="spend" class="stat" title="Estimated Claude API spend in this browser"></span>
+      <button id="approvals-btn" class="stat btn-ghost" title="Pending approvals">📋 <b id="approvals-count">0</b></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-col">
+      <div class="map-wrap">
+        <canvas id="map" aria-label="Village map. Click a villager to talk to them; click empty ground to walk there."></canvas>
+        <div class="map-hint">Click a villager to talk · click a house to visit its owner · click the ground to walk</div>
+      </div>
+      <div class="feed-wrap">
+        <div class="feed-title">// Village activity</div>
+        <ul id="feed" class="feed"></ul>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-tab="chat">Talk</button>
+        <button class="tab" data-tab="tasks">To-Do</button>
+        <button class="tab" data-tab="approvals">Approvals <span id="tab-badge" class="badge hidden">0</span></button>
+        <button class="tab" data-tab="townhall">Town Hall</button>
+        <button class="tab" data-tab="village">Village</button>
+      </nav>
+
+      <!-- Step 6: talk to anyone -->
+      <div class="panel active" id="panel-chat">
+        <div id="people" class="people"></div>
+        <div class="who" id="who"></div>
+        <div id="chat-log" class="chat-log"></div>
+        <form id="chat-form" class="chat-form">
+          <textarea id="chat-input" rows="2" placeholder="Ask for anything… e.g. “Reply to Sam's email and say Friday works”"></textarea>
+          <button class="btn" type="submit">Send</button>
+        </form>
+      </div>
+
+      <!-- Step 5: real jobs, tracked -->
+      <div class="panel" id="panel-tasks">
+        <form id="task-form" class="row-form">
+          <input id="task-title" placeholder="New task…" required maxlength="120">
+          <select id="task-owner"></select>
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <div class="filters">
+          <select id="task-filter-owner"><option value="">Everyone</option></select>
+          <select id="task-filter-status">
+            <option value="open">Open</option>
+            <option value="needs_approval">Needs approval</option>
+            <option value="done">Done</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div id="task-list" class="cards"></div>
+      </div>
+
+      <!-- Step 7: stay in charge -->
+      <div class="panel" id="panel-approvals">
+        <p class="note">Nothing leaves the village without you. Approving an email opens a pre-filled Gmail draft — <b>you</b> still press Send. Calendar items open a pre-filled Google Calendar event. Posts are copied for you to paste. Purchases are never made for you.</p>
+        <div id="approval-list" class="cards"></div>
+        <details class="history"><summary>History</summary><div id="approval-history" class="cards"></div></details>
+      </div>
+
+      <!-- Step 6: Town Hall -->
+      <div class="panel" id="panel-townhall">
+        <form id="th-form" class="row-form">
+          <input id="th-topic" placeholder="Meeting topic, e.g. “Plan my week”" required maxlength="200">
+          <button class="btn" type="submit" id="th-start">Call meeting</button>
+        </form>
+        <button class="btn btn-ghost hidden" id="th-end">Adjourn meeting</button>
+        <div id="th-log" class="chat-log tall"></div>
+      </div>
+
+      <!-- Steps 1–3 + settings -->
+      <div class="panel" id="panel-village">
+        <h3>You</h3>
+        <label>Your name <input id="set-name" maxlength="24"></label>
+
+        <h3>Brain (Claude)</h3>
+        <label>Anthropic API key <input id="set-key" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
+        <p class="note">Stored only in this browser and sent only to api.anthropic.com. Leave empty to run the village in offline mode. Don't use a shared or work key on a public site.</p>
+        <div class="two">
+          <label>Model
+            <select id="set-model">
+              <option value="claude-opus-5-5">Claude Opus 5.5</option>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
+              <option value="claude-fable-5-1">Claude Fable 5.1</option>
+            </select>
+          </label>
+          <label>Effort
+            <select id="set-effort">
+              <option value="low">Low (fast, cheap)</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="set-autowork"> Agents use Claude to actually do their tasks (costs API credits)</label>
+
+        <h3>Team</h3>
+        <select id="edit-agent"></select>
+        <div id="agent-editor" class="editor">
+          <label>Name <input id="ed-name" maxlength="20"></label>
+          <label>Role <input id="ed-role" maxlength="60"></label>
+          <label>Instructions <textarea id="ed-instructions" rows="5"></textarea></label>
+          <label>Routing keywords (comma separated) <input id="ed-keywords"></label>
+          <label>Intern name <input id="ed-intern" maxlength="20"></label>
+          <button class="btn" id="ed-save">Save villager</button>
+        </div>
+
+        <h3>Ground rules</h3>
+        <ol id="rules" class="rules"></ol>
+
+        <h3>Data</h3>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="export">Export JSON</button>
+          <label class="btn btn-ghost file-btn">Import JSON<input type="file" id="import" accept="application/json" hidden></label>
+          <button class="btn btn-danger" id="reset">Reset village</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

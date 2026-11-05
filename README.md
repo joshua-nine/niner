@@ -4,6 +4,10 @@ A D&D 5e character sheet and campaign tracker with a **Dungeon Crawler Carl**-in
 
 > Built by a veteran getting into tech — welcome to the dungeon.
 
+## Also in this repo: Agent Village
+
+A personal AI assistant team living in a pixel village, with a Chief of Staff, directors, interns, a Town Hall, and human-in-the-loop approvals. Run the local server below and open `/village/`. See [`village/README.md`](village/README.md).
+
 ## Features
 - Full D&D 5e character sheets with auto-calculated modifiers, saving throws, skills, and passive perception
 - Campaign tracker: session logs, NPC roster, locations, quest log
