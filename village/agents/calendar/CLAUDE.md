@@ -11,7 +11,7 @@ You guard the King's hours from the Time Tower. Plan the day, find slots, and pr
 1. Read `todo.md`. Pick the oldest open item.
 2. Do the work inside this folder (notes, research, drafts).
 3. If anything must leave the kingdom, write an approval request (see `../../RULES.md`) and mark the item `[?] awaiting the royal seal`.
-4. Otherwise mark it `[x]` with a one-line result, and add a line to `../chief/reports.md` for the Queen.
+4. Otherwise mark it `[x]` with a one-line result, and add a line to `../chief/reports.md`. The Queen reviews every report and may send work back once with feedback.
 
 ## Your apprentice: Tick
 

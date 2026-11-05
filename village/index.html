@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agent Kingdom</title>
+  <meta name="theme-color" content="#0b0d14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kingdom">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&family=Exo+2:wght@400;600&display=swap">
   <link rel="stylesheet" href="village.css">
@@ -14,7 +21,8 @@
     <div class="top-stats">
       <span id="clock" class="stat"></span>
       <span id="mode" class="stat pill"></span>
-      <span id="spend" class="stat" title="Estimated Claude API spend in this browser"></span>
+      <span id="spend" class="stat" title="Estimated Claude API spend across your devices"></span>
+      <span id="sync-pill" class="stat pill"></span>
       <button id="approvals-btn" class="stat btn-ghost" title="Petitions awaiting your seal">👑 <b id="approvals-count">0</b></button>
     </div>
   </header>
@@ -44,6 +52,11 @@
       <div class="panel active" id="panel-chat">
         <div id="people" class="people"></div>
         <div class="who" id="who"></div>
+        <div id="queen-quick" class="quick hidden">
+          <button class="chip" data-say="I could use a pep talk.">💜 Pep talk</button>
+          <button class="chip" data-say="Honestly, I'm having a rough day and feeling overwhelmed.">😮‍💨 Rough day</button>
+          <button class="chip" data-say="How is the court doing? What's open and what did you review?">📋 How's the court?</button>
+        </div>
         <div id="chat-log" class="chat-log"></div>
         <form id="chat-form" class="chat-form">
           <textarea id="chat-input" rows="2" placeholder="Command anything… e.g. “Reply to Sam's email and say Friday works”"></textarea>
@@ -62,7 +75,8 @@
           <select id="task-filter-owner"><option value="">Everyone</option></select>
           <select id="task-filter-status">
             <option value="open">Open</option>
-            <option value="needs_approval">Needs approval</option>
+            <option value="review">Queen reviewing</option>
+            <option value="needs_approval">Awaits your seal</option>
             <option value="done">Done</option>
             <option value="all">All</option>
           </select>
@@ -89,6 +103,27 @@
 
       <!-- Steps 1–3 + settings -->
       <div class="panel" id="panel-village">
+        <h3>Your devices (phone + computer)</h3>
+        <div id="sync-box" class="editor">
+          <form id="sync-in" class="editor">
+            <p class="note">Sign in with the same account on your phone and your computer and they share one kingdom: tasks, petitions, chats and the court, all kept in step. Your NinerSheet login works here too. Each device also keeps its own copy, so nothing is lost if you go offline.</p>
+            <label>Email <input id="sync-email" type="email" autocomplete="email"></label>
+            <label>Password <input id="sync-pass" type="password" autocomplete="current-password" minlength="6"></label>
+            <div class="btn-row">
+              <button class="btn" id="sync-signin" type="submit">Sign in</button>
+              <button class="btn btn-ghost" id="sync-signup" type="button">Create account</button>
+              <button class="btn btn-ghost" id="sync-forgot" type="button">Forgot password</button>
+            </div>
+          </form>
+          <div id="sync-out" class="editor hidden">
+            <p>Signed in as <b id="sync-who"></b></p>
+            <p class="note" id="sync-state"></p>
+            <p class="note">Your API key stays on each device. Enter it once on your phone too.</p>
+            <div class="btn-row"><button class="btn btn-ghost" id="sync-signout" type="button">Sign out</button></div>
+          </div>
+          <p class="note warn-text" id="sync-msg"></p>
+        </div>
+
         <h3>The King (you)</h3>
         <label>Your royal name <input id="set-name" maxlength="24"></label>
 

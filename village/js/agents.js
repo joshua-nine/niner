@@ -15,7 +15,8 @@ const WORK_ICON = { wizard: '🔮', apprentice: '🔮', dragon: '💰', whelp: '
 const ROYAL = new Set(['queen', 'princess', 'prince', 'duchess']);
 
 export const sims = new Map();
-export const hooks = { onTaskWorked: async () => {} };
+// canWork: only one of your devices does the work when you're signed in on several.
+export const hooks = { onTaskWorked: async () => {}, canWork: () => true, visitLine: () => '' };
 let meeting = null;           // { spots: Map<id, tile> }
 
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -74,6 +75,8 @@ function goTo(s, spot, then, { exact = false } = {}) {
   return true;
 }
 
+export function setIcon(id, icon) { const s = sims.get(id); if (s) s.icon = icon; }
+
 export function say(id, text, secs = 4, exclusive = false) {
   if (exclusive) for (const o of sims.values()) o.bubble = null;   // one speaker at a time
   const s = sims.get(id);
@@ -112,10 +115,21 @@ function plan(s) {
     const pending = pendingApprovals().length;
     if (pending && (!s.lastDelivery || performance.now() - s.lastDelivery > 45000)) {
       goTo(s, doorSpot('mayor'), () => {
-        s.lastDelivery = performance.now();
+        s.lastDelivery = s.lastVisit = performance.now();
         s.icon = '📋';
-        say(s.id, `Your Majesty, ${pending} petition${pending > 1 ? 's await' : ' awaits'} your royal seal.`, 5);
+        say(s.id, `Your Majesty, ${pending} petition${pending > 1 ? 's await' : ' awaits'} your royal seal. I've reviewed each one.`, 5);
         rest(s, 4, 6);
+      });
+      return;
+    }
+    // Moral support: every few minutes she walks over just to check on you.
+    if (!s.lastVisit) s.lastVisit = performance.now() - 120000;
+    if (performance.now() - s.lastVisit > 200000) {
+      goTo(s, doorSpot('mayor'), () => {
+        s.lastVisit = performance.now();
+        s.icon = '💜';
+        say(s.id, hooks.visitLine(), 6);
+        rest(s, 5, 8);
       });
       return;
     }
@@ -161,6 +175,7 @@ export function update(dt) {
     } else if (s.state === 'work') {
       const task = state.tasks.find(t => t.id === s.task);
       if (!task || task.status !== 'doing') { s.state = 'idle'; s.timer = 0.5; continue; }
+      if (!hooks.canWork()) continue;          // another of your devices is doing the work
       task.progress = Math.min(1, (task.progress || 0) + dt / WORK_SECONDS);
       if (task.progress >= 1) finishWork(s, task);
     } else if (s.state === 'meeting' && !meeting) {

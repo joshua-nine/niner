@@ -1,8 +1,9 @@
 // Boot: draw the world, spawn villagers, run the loop, wire clicks.
 import { renderStatic, renderDynamic, size, buildingAt } from './world.js';
-import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, say } from './agents.js';
-import { state, log } from './store.js';
-import { workOnTask } from './brain.js';
+import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, say, setIcon } from './agents.js';
+import { state, log, onChange } from './store.js';
+import { workOnTask, superviseNext, nextForReview, queenVisitLine } from './brain.js';
+import { initSync, sync } from './sync.js';
 import { initUI, ui, selectAgent } from './ui.js';
 import { drawWildDragon } from './sprites.js';
 import { DRAGON_PERCH } from './config.js';
@@ -19,8 +20,37 @@ world = renderStatic();
 
 initAgents();
 hooks.onTaskWorked = (id, task) => workOnTask(id, task);
+hooks.canWork = () => sync.leader;          // only one of your devices runs the court
+hooks.visitLine = queenVisitLine;
+onChange(() => initAgents());               // the court may change on another device
 initUI();
 ui.onSelect = () => {};
+initSync();
+
+// ── The Queen supervises every task ──────────────────────────
+// Finished tasks and new petitions wait for her review. She takes them one
+// at a time; only the device that runs the court does this.
+let reviewing = false;
+setInterval(async () => {
+  if (reviewing || !sync.leader) return;
+  const next = nextForReview();
+  if (!next) return;
+  reviewing = true;
+  const who = state.agents.find(a => a.id === (next.type === 'task' ? next.item.owner : next.item.from))
+    || state.agents.flatMap(a => a.intern ? [{ ...a.intern }] : []).find(i => i.id === (next.item.owner || next.item.from));
+  setIcon('chief', '🔍');
+  say('chief', `Reviewing ${who?.name || 'the court'}'s work…`, 30);
+  try {
+    await new Promise(r => setTimeout(r, 2500));
+    const res = await superviseNext();
+    if (res) say('chief', res.verdict === 'revise' ? `Back to you, ${res.owner?.name}: ${res.feedback || res.note}` : `Approved: ${res.note}`, 6);
+  } catch (e) {
+    log('chief', `Review failed: ${e.message}`, 'warn');
+  } finally {
+    setIcon('chief', null);
+    reviewing = false;
+  }
+}, 4000);
 
 if (!state.log.length) {
   log('chief', 'The kingdom is founded. Speak to me, the Queen, to get started.', 'ok');

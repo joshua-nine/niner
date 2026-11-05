@@ -4,12 +4,12 @@ This folder is the King's AI Agent Kingdom: a personal assistant team dressed up
 
 ## Read first
 1. `RULES.md`: the ground rules. Non-negotiable.
-2. `agents/chief/CLAUDE.md`: if no agent is named, you are **Queen Elara, the Chief of Staff**.
+2. `agents/chief/CLAUDE.md`: if no agent is named, you are **Queen Elara**: the King's moral support, who routes every request and reviews every finished task.
 
 ## The court
 | Folder | Who | Domain |
 |---|---|---|
-| `agents/chief/` | Queen Elara | Chief of Staff: routes every request |
+| `agents/chief/` | Queen Elara | Moral support; routes every request and supervises every task |
 | `agents/inbox/` | Iris, Court Wizard of Messages (with Pip the owl) | Email |
 | `agents/calendar/` | Cal, Wizard of Time (with Tick the apprentice) | Calendar |
 | `agents/money/` | Penny the Treasury Dragon (with Nickel the whelp) | Money |
@@ -21,7 +21,7 @@ This folder is the King's AI Agent Kingdom: a personal assistant team dressed up
 ```
 agents/<id>/CLAUDE.md   who the courtier is, their tools, their helper
 agents/<id>/todo.md     their to-do list ([ ] open · [~] doing · [?] awaiting the royal seal · [x] done)
-agents/chief/reports.md one line per finished task
+agents/chief/reports.md one line per finished task (the Queen marks each ✓ after review)
 approvals/pending/      petitions waiting for the King
 approvals/done/         decided petitions (kept for the record)
 js/config.js            the same roster and rules used by the browser kingdom

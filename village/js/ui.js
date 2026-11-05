@@ -2,8 +2,10 @@
 import { GROUND_RULES } from './config.js';
 import {
   state, save, onChange, agentById, allPeople, addTask, updateTask, resolveApproval,
-  pendingApprovals, log, resetVillage, exportState, importState,
+  pendingApprovals, log, resetVillage, exportState, importState, touchMeta, deleteTask,
+  liveTasks, totalUsage,
 } from './store.js';
+import { sync, onSyncChange, signIn, signUp, signOutSync, resetPassword, friendlyAuthError } from './sync.js';
 import { chat, townhallTurn, hasKey } from './brain.js';
 import { say, startMeeting, endMeeting, inMeeting, initAgents, sims } from './agents.js';
 
@@ -57,6 +59,7 @@ let typing = new Set();
 function renderChat() {
   const p = agentById(ui.selected);
   $('#who').replaceChildren(h('b', {}, p.name), ` — ${p.role}`);
+  $('#queen-quick').classList.toggle('hidden', p.id !== 'chief');
   const logEl = $('#chat-log'); logEl.replaceChildren();
   const hist = state.chats[ui.selected] || [];
   if (!hist.length) logEl.append(h('div', { class: 'msg assistant' }, h('span', { class: 'from' }, p.name),
@@ -98,24 +101,28 @@ function fillOwnerSelects() {
 
 function renderTasks() {
   const owner = $('#task-filter-owner').value, status = $('#task-filter-status').value;
-  const list = state.tasks.filter(t => (!owner || t.owner === owner) && (
-    status === 'all' || (status === 'open' ? (t.status === 'todo' || t.status === 'doing') : t.status === status)));
+  const OPEN = ['todo', 'doing', 'review'];
+  const list = liveTasks().filter(t => (!owner || t.owner === owner) && (
+    status === 'all' || (status === 'open' ? OPEN.includes(t.status) : t.status === status)));
   const box = $('#task-list'); box.replaceChildren();
   if (!list.length) box.append(h('p', { class: 'note' }, 'Nothing here. Ask the Queen for something, or add a task above.'));
   for (const t of list.slice(0, 80)) {
     box.append(h('div', { class: 'card' },
-      h('div', { class: 'card-top' }, h('span', { class: 'card-title' }, t.title), h('span', { class: `status ${t.status}` }, t.status.replace('_', ' '))),
+      h('div', { class: 'card-top' }, h('span', { class: 'card-title' }, t.title), h('span', { class: `status ${t.status}` }, STATUS_LABEL[t.status] || t.status)),
       h('div', { class: 'card-top' }, chipFor(t.owner), h('span', { class: 'meta' }, `${t.id} · from ${agentById(t.by)?.name || t.by} · ${timeStr(t.created)}`)),
       t.status === 'doing' ? h('div', { class: 'progress' }, h('i', { style: `width:${Math.round((t.progress || 0) * 100)}%` })) : null,
       t.notes ? h('div', { class: 'meta' }, t.notes) : null,
       t.result ? h('div', { class: 'result' }, t.result) : null,
+      t.queenNote ? h('div', { class: 'queen-note' }, `👑 ${agentById('chief')?.name || 'The Queen'}: ${t.queenNote}`) : null,
       h('div', { class: 'btn-row' },
         t.status !== 'done' ? h('button', { class: 'btn btn-ghost', onclick: () => { updateTask(t.id, { status: 'done', progress: 1 }); log('mayor', `Marked done: ${t.title}`, 'ok'); } }, 'Mark done') : null,
-        h('button', { class: 'btn btn-ghost', onclick: () => { state.tasks = state.tasks.filter(x => x.id !== t.id); save(); } }, 'Delete'),
+        h('button', { class: 'btn btn-ghost', onclick: () => deleteTask(t.id) }, 'Delete'),
       ),
     ));
   }
 }
+
+const STATUS_LABEL = { todo: 'to do', doing: 'doing', review: 'queen reviewing', needs_approval: 'awaits your seal', done: 'done', declined: 'declined' };
 
 // ── Approvals (Step 7) ───────────────────────────────────────
 const FIELDS = {
@@ -161,7 +168,7 @@ let approvalsSig = '';
 function renderApprovals(force = false) {
   const pending = pendingApprovals();
   // Don't wipe half-edited drafts: only rebuild when the queue itself changes.
-  const sig = state.approvals.map(a => a.id + a.status).join('|');
+  const sig = state.approvals.map(a => a.id + a.status + (a.stage || '')).join('|');
   if (!force && sig === approvalsSig) return;
   approvalsSig = sig;
   const box = $('#approval-list'); box.replaceChildren();
@@ -178,6 +185,7 @@ function renderApprovals(force = false) {
     box.append(h('div', { class: 'card pending' },
       h('div', { class: 'card-top' }, h('span', { class: 'card-title' }, `${ICON[a.kind] || ''} ${a.summary}`), h('span', { class: 'status pending' }, a.kind)),
       h('div', { class: 'card-top' }, chipFor(a.from), h('span', { class: 'meta' }, `${a.id}${a.taskId ? ' · ' + a.taskId : ''} · ${timeStr(a.created)}`)),
+      a.queenNote ? h('div', { class: 'queen-note' }, `👑 Reviewed by ${agentById('chief')?.name || 'the Queen'}: ${a.queenNote}`) : null,
       ...fields,
       h('div', { class: 'btn-row' },
         h('button', { class: 'btn btn-gold', onclick: () => { collect(); resolveApproval(a.id, true); carryOut(a); say(a.from, 'Thank you, Your Majesty!', 3); } },
@@ -187,6 +195,8 @@ function renderApprovals(force = false) {
     ));
   }
   const hist = $('#approval-history'); hist.replaceChildren();
+  const inReview = state.approvals.filter(x => x.status === 'pending' && x.stage === 'queen').length;
+  if (inReview) box.prepend(h('p', { class: 'note' }, `👑 The Queen is reviewing ${inReview} more petition${inReview > 1 ? 's' : ''} before ${inReview > 1 ? 'they reach' : 'it reaches'} you.`));
   for (const a of state.approvals.filter(x => x.status !== 'pending').slice(0, 30)) {
     hist.append(h('div', { class: 'card' },
       h('div', { class: 'card-top' }, h('span', {}, `${ICON[a.kind] || ''} ${a.summary}`), h('span', { class: `status ${a.status}` }, a.status)),
@@ -273,7 +283,7 @@ function saveEditor() {
   a.instructions = $('#ed-instructions').value.trim();
   a.keywords = $('#ed-keywords').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   if (a.intern && $('#ed-intern').value.trim()) a.intern.name = $('#ed-intern').value.trim();
-  save(); toast(`${a.name} updated.`); renderAll();
+  touchMeta(); toast(`${a.name} updated.`); renderAll();
 }
 
 function renderFeed() {
@@ -288,7 +298,42 @@ function renderTop() {
   const m = $('#mode');
   m.textContent = live ? `● Claude · ${state.settings.model.replace('claude-', '')}` : '● Offline mode';
   m.className = `stat pill ${live ? 'live' : 'offline'}`;
-  $('#spend').textContent = `$${state.usage.cost.toFixed(2)} · ${state.usage.calls} calls`;
+  const u = totalUsage();
+  $('#spend').textContent = `$${u.cost.toFixed(2)} · ${u.calls} calls`;
+  const sp = $('#sync-pill');
+  const label = { local: '💾 This device only', connecting: '☁️ Syncing…', synced: '☁️ Synced', error: '⚠️ Sync problem' }[sync.status];
+  sp.textContent = label; sp.className = `stat pill sync-${sync.status}`;
+  sp.title = sync.error || (sync.user ? `Signed in as ${sync.user.email}` : 'Sign in under Kingdom → Your devices to sync phone and computer');
+}
+
+// ── Your devices (sync) ──────────────────────────────────────
+function renderSync() {
+  const box = $('#sync-box'); if (!box) return;
+  box.querySelector('#sync-in').classList.toggle('hidden', !!sync.user);
+  box.querySelector('#sync-out').classList.toggle('hidden', !sync.user);
+  if (sync.user) {
+    $('#sync-who').textContent = sync.user.email;
+    const when = sync.lastSynced ? ` · last synced ${timeStr(sync.lastSynced)}` : '';
+    $('#sync-state').textContent = (sync.status === 'error' ? `⚠️ ${sync.error}` : sync.status === 'synced' ? `☁️ Synced${when}` : '☁️ Connecting…') +
+      (sync.leader ? ' · this device is running the court' : ' · another of your devices is running the court');
+  }
+  $('#sync-msg').textContent = !sync.user && sync.error ? sync.error : '';
+  renderTop();
+}
+
+function initSyncUI() {
+  const email = () => $('#sync-email').value.trim(), pass = () => $('#sync-pass').value;
+  const run = async (fn, okMsg) => {
+    $('#sync-msg').textContent = '';
+    try { await fn(); if (okMsg) toast(okMsg); }
+    catch (e) { $('#sync-msg').textContent = friendlyAuthError(e); }
+  };
+  $('#sync-signin').addEventListener('click', e => { e.preventDefault(); run(() => signIn(email(), pass()), 'Signed in. Syncing your kingdom…'); });
+  $('#sync-signup').addEventListener('click', e => { e.preventDefault(); run(() => signUp(email(), pass()), 'Account created. Your kingdom is now saved to it.'); });
+  $('#sync-forgot').addEventListener('click', e => { e.preventDefault(); if (!email()) { $('#sync-msg').textContent = 'Type your email first.'; return; } run(() => resetPassword(email()), 'Password reset email sent.'); });
+  $('#sync-signout').addEventListener('click', () => run(() => signOutSync(), 'Signed out. This device keeps its own copy.'));
+  onSyncChange(renderSync);
+  renderSync();
 }
 
 export function renderAll() {
@@ -300,6 +345,8 @@ export function initUI() {
   $('#approvals-btn').addEventListener('click', () => showTab('approvals'));
   $('#chat-form').addEventListener('submit', sendChat);
   $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendChat(e); });
+  document.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', e => { $('#chat-input').value = b.dataset.say; sendChat(e); }));
+  initSyncUI();
   $('#task-form').addEventListener('submit', e => {
     e.preventDefault();
     const title = $('#task-title').value.trim(); if (!title) return;
@@ -311,11 +358,11 @@ export function initUI() {
   $('#th-form').addEventListener('submit', runMeeting);
   $('#th-end').addEventListener('click', adjourn);
 
-  $('#set-name').addEventListener('change', e => { state.mayorName = e.target.value.trim() || 'The King'; save(); renderAll(); });
+  $('#set-name').addEventListener('change', e => { state.mayorName = e.target.value.trim() || 'The King'; touchMeta(); renderAll(); });
   $('#set-key').addEventListener('change', e => { state.settings.apiKey = e.target.value.trim(); save(); toast(state.settings.apiKey ? 'Key saved. The court now thinks with Claude.' : 'Key removed. Offline mode.'); });
-  $('#set-model').addEventListener('change', e => { state.settings.model = e.target.value; save(); });
-  $('#set-effort').addEventListener('change', e => { state.settings.effort = e.target.value; save(); });
-  $('#set-autowork').addEventListener('change', e => { state.settings.autoWork = e.target.checked; save(); });
+  $('#set-model').addEventListener('change', e => { state.settings.model = e.target.value; touchMeta(); });
+  $('#set-effort').addEventListener('change', e => { state.settings.effort = e.target.value; touchMeta(); });
+  $('#set-autowork').addEventListener('change', e => { state.settings.autoWork = e.target.checked; touchMeta(); });
   $('#edit-agent').addEventListener('change', loadEditor);
   $('#ed-save').addEventListener('click', saveEditor);
   $('#export').addEventListener('click', () => {
@@ -338,6 +385,6 @@ export function initUI() {
   renderAll();
   // Cheap re-render on any state change; progress bars refresh on a timer.
   let raf = 0;
-  onChange(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { renderTop(); renderTasks(); renderApprovals(); renderFeed(); renderTownhall(); if (!typing.size) renderChat(); }); });
+  onChange(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { renderTop(); renderPeople(); renderTasks(); renderApprovals(); renderFeed(); renderTownhall(); if (!typing.size) renderChat(); }); });
   setInterval(() => { if ($('#panel-tasks').classList.contains('active')) renderTasks(); }, 1000);
 }

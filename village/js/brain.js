@@ -8,6 +8,7 @@
 import { GROUND_RULES, PRICES } from './config.js';
 import {
   state, save, agentById, addTask, updateTask, requestApproval, log, openTasksFor,
+  addUsage, liveTasks, updateApproval,
 } from './store.js';
 
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.1.0/+esm';
@@ -109,9 +110,11 @@ function runTool(agentId, name, input) {
     const t = state.tasks.find(x => x.id === input.task_id);
     if (!t) return { error: 'No such task.' };
     if (t.owner !== agentId && me.kind !== 'chief') return { error: 'You can only complete your own tasks.' };
-    updateTask(t.id, { status: 'done', progress: 1, result: input.result || '' });
-    log(agentId, `Completed: ${t.title}`, 'ok');
-    return { ok: true };
+    // Every finished task goes to the Queen for review (her own tasks excepted).
+    const reviewed = t.owner === 'chief';
+    updateTask(t.id, { status: reviewed ? 'done' : 'review', progress: 1, result: input.result || '' });
+    log(agentId, reviewed ? `Completed: ${t.title}` : `Finished “${t.title}”. Sent to the Queen for review`, 'ok');
+    return { ok: true, note: reviewed ? 'done' : 'The Queen will review your work before it is marked done.' };
   }
   return { error: `Unknown tool ${name}` };
 }
@@ -120,16 +123,17 @@ function systemPrompt(agentId, mode) {
   const me = agentById(agentId);
   const roster = state.agents.map(a =>
     `- ${a.id}: ${a.name}, ${a.role}${a.intern ? ` (intern: ${a.intern.id} ${a.intern.name})` : ''}`).join('\n');
-  const mine = state.tasks.filter(t => t.owner === agentId && t.status !== 'done' && t.status !== 'declined')
+  const mine = liveTasks().filter(t => t.owner === agentId && t.status !== 'done' && t.status !== 'declined')
     .slice(0, 15).map(t => `- [${t.id}] ${t.title} — ${t.status}${t.notes ? ` (${t.notes})` : ''}`).join('\n') || '- (empty)';
   const extra = me.kind === 'chief'
-    ? '\nOpen tasks across the court:\n' + (state.tasks.filter(t => t.status !== 'done' && t.status !== 'declined').slice(0, 25)
+    ? '\nOpen tasks across the court:\n' + (liveTasks().filter(t => t.status !== 'done' && t.status !== 'declined').slice(0, 25)
       .map(t => `- [${t.id}] ${agentById(t.owner)?.name}: ${t.title} — ${t.status}`).join('\n') || '- (none)')
     : '';
   const modeText = {
     chat: 'The King is speaking to you directly.',
     townhall: 'This is a Town Hall meeting with the whole team. Speak in turn, in at most 60 words, building on what others said. You may add tasks if something concrete comes up.',
     work: 'You are at your desk doing a task from your list.',
+    review: 'You are reviewing a courtier\'s finished work before it is marked done or reaches the King. Be fair and specific; approve good work and praise it.',
   }[mode];
   return [
     `You are ${me.name}, ${me.role}, a member of the royal court in the AI Agent Kingdom of ${state.mayorName} (the King, a real person you assist). The court is a personal assistant team dressed up as a fantasy realm: the work itself is real and modern.`,
@@ -138,6 +142,7 @@ function systemPrompt(agentId, mode) {
     `THE TEAM:\n${roster}`,
     `YOUR TO-DO LIST:\n${mine}${extra}`,
     `Today is ${new Date().toLocaleString()}. ${modeText}`,
+    'If the King ever expresses real distress or thoughts of self-harm, respond with care first (never turn it into a task), and gently encourage reaching out to someone they trust or a crisis line (US: call or text 988; elsewhere: findahelpline.com).',
     'Write plain text (no markdown headings). Address the human as "Your Majesty" and keep a light medieval flavour, but be warm, brief and practical: real dates, real drafts, real next steps.',
   ].join('\n\n');
 }
@@ -146,11 +151,7 @@ function trackUsage(resp) {
   const u = resp.usage || {};
   const price = PRICES[resp.model] || PRICES[state.settings.model] || { in: 0, out: 0 };
   const inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-  state.usage.input += inTok;
-  state.usage.output += u.output_tokens || 0;
-  state.usage.cost += (inTok * price.in + (u.output_tokens || 0) * price.out) / 1e6;
-  state.usage.calls += 1;
-  save();
+  addUsage(inTok, u.output_tokens || 0, (inTok * price.in + (u.output_tokens || 0) * price.out) / 1e6);
 }
 
 async function claudeLoop(agentId, messages, mode) {
@@ -236,15 +237,151 @@ export async function workOnTask(agentId, task) {
     const messages = [{ role: 'user', content:
       `Work on task [${task.id}] "${task.title}".${task.notes ? ` Notes: ${task.notes}` : ''}\n` +
       'Produce the deliverable now. If it needs anything to leave the kingdom (email, post, purchase, calendar event), call request_approval with task_id and the complete draft. ' +
-      'Otherwise call complete_todo with the result (under 120 words). Then give a one-sentence report for the Queen (Chief of Staff).' }];
+      'Otherwise call complete_todo with the result (under 120 words). The Queen reviews all work, so make it complete and honest. Then give a one-sentence report for the Queen.' }];
     try { report = await claudeLoop(agentId, messages, 'work'); }
     catch (e) { report = friendlyError(e); }
   } else {
     report = offlineWork(agentId, task);
   }
   const t = state.tasks.find(x => x.id === task.id);
-  if (t && t.status === 'doing') updateTask(t.id, { status: 'done', progress: 1, result: t.result || report });
+  if (t && t.status === 'doing')
+    updateTask(t.id, { status: t.owner === 'chief' ? 'done' : 'review', progress: 1, result: t.result || report });
   return report;
+}
+
+// ── The Queen's supervision ──────────────────────────────────
+// Every finished task (status "review") and every petition (stage "queen")
+// is checked by the Queen before it is done or reaches the King.
+// She may send work back once with feedback; after that she passes it on
+// with a note, so nothing loops forever.
+const REVIEW_SCHEMA = {
+  type: 'object',
+  properties: {
+    verdict: { type: 'string', enum: ['approve', 'revise'] },
+    note: { type: 'string', description: 'One or two sentences: your assessment, for the King and the courtier.' },
+    feedback: { type: 'string', description: 'If revise: exactly what to fix. Otherwise empty.' },
+  },
+  required: ['verdict', 'note', 'feedback'],
+  additionalProperties: false,
+};
+
+export function nextForReview() {
+  const a = state.approvals.find(x => x.status === 'pending' && x.stage === 'queen');
+  if (a) return { type: 'approval', item: a };
+  const t = liveTasks().find(x => x.status === 'review');
+  return t ? { type: 'task', item: t } : null;
+}
+
+async function claudeReview(what) {
+  const { client } = await getClient();
+  const model = state.settings.model;
+  const params = {
+    model, max_tokens: 2000,
+    system: systemPrompt('chief', 'review'),
+    output_config: { effort: state.settings.effort || 'low', format: { type: 'json_schema', schema: REVIEW_SCHEMA } },
+    messages: [{ role: 'user', content: what }],
+  };
+  if (FALLBACK_MODELS.has(model)) { params.betas = ['server-side-fallback-2026-07-01']; params.fallbacks = 'default'; }
+  const resp = await client.beta.messages.create(params);
+  trackUsage(resp);
+  if (resp.stop_reason === 'refusal') return null;
+  const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+export async function superviseNext() {
+  const next = nextForReview();
+  if (!next) return null;
+  const { type, item } = next;
+  const owner = agentById(type === 'task' ? item.owner : item.from);
+  const task = type === 'task' ? item : state.tasks.find(t => t.id === item.taskId);
+  const canRevise = task && (task.revisions || 0) < 1;
+  let review = null;
+  if (hasKey()) {
+    const what = type === 'task'
+      ? `Review ${owner?.name}'s finished task.\nTask: "${item.title}"\nNotes: ${item.notes || '(none)'}\nResult:\n${item.result || '(no result recorded)'}`
+      : `Review ${owner?.name}'s petition before it reaches the King.\nKind: ${item.kind}\nSummary: ${item.summary}\nDraft:\n${JSON.stringify(item.details, null, 2)}` +
+        (task ? `\nFor task: "${task.title}" (${task.notes || 'no notes'})` : '');
+    try {
+      review = await claudeReview(what + `\n\n${canRevise ? 'Approve if it is correct, complete and within the ground rules; otherwise choose revise with specific feedback.' : 'It has already been revised once: approve it, and mention any remaining concern in your note for the King.'}`);
+    } catch (e) { log('chief', `Couldn't review with Claude (${friendlyError(e)}). Passed it on unreviewed`, 'warn'); }
+  }
+  if (!review) review = offlineReview(type, item, owner);
+  if (review.verdict === 'revise' && !canRevise) review.verdict = 'approve';
+
+  if (review.verdict === 'revise') {
+    if (type === 'approval') updateApproval(item.id, { status: 'withdrawn', queenNote: review.note });
+    updateTask(task.id, {
+      status: 'todo', progress: 0, revisions: (task.revisions || 0) + 1,
+      notes: `${task.notes ? task.notes + '\n' : ''}Queen's feedback: ${review.feedback || review.note}`,
+    });
+    log('chief', `Sent “${task.title}” back to ${owner?.name}: ${review.feedback || review.note}`, 'warn');
+  } else if (type === 'task') {
+    updateTask(item.id, { status: 'done', queenNote: review.note });
+    log('chief', `Reviewed and approved “${item.title}”`, 'ok');
+  } else {
+    updateApproval(item.id, { stage: 'king', queenNote: review.note });
+    log('chief', `Reviewed “${item.summary}”. It now awaits your royal seal`, 'approval');
+  }
+  return { type, item, owner, ...review };
+}
+
+function offlineReview(type, item, owner) {
+  const name = owner?.name || 'The courtier';
+  const notes = type === 'task'
+    ? [`${name} did good work here. Marked complete.`, `Checked and complete. Well done, ${name}.`, `This meets the standard of the court.`]
+    : [`I've read ${name}'s draft. It's ready for your seal, or edit it first if you like.`, `Checked: nothing goes out until you approve. The draft looks sound.`];
+  return { verdict: 'approve', note: notes[Math.floor(Math.random() * notes.length)], feedback: '' };
+}
+
+// ── The Queen's moral support ────────────────────────────────
+const FEELINGS = /\b(tired|exhausted|stress|stressed|overwhelm|anxious|anxiety|sad|down|bad day|rough day|burn(ed|t)? out|can'?t do|cannot do|struggling|frustrat|lonely|worried|scared|hopeless)/;
+const CRISIS = /(kill myself|killing myself|end it all|end my life|hurt myself|harm myself|suicid|self[- ]?harm|want to die|wanna die|don'?t want to (live|be here|wake up)|no reason to live|can'?t go on|better off without me|not worth living)/;
+
+export function doneToday() {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  return liveTasks().filter(t => t.status === 'done' && (t.updated || 0) >= start.getTime()).length;
+}
+
+function crisisReply() {
+  return 'Your Majesty, I\'m really glad you told me, and I\'m staying right here with you. What you\'re feeling matters, and you deserve real support right now, from a real person. ' +
+    'Please reach out to someone you trust, or a crisis line: in the US you can call or text 988, and findahelpline.com lists free, confidential lines in other countries. ' +
+    'If you\'re in danger right now, please call your local emergency number. You don\'t have to carry this alone.';
+}
+
+function queenComfort(t) {
+  if (CRISIS.test(t)) return crisisReply();
+  const open = liveTasks().filter(x => ['todo', 'doing', 'review'].includes(x.status)).length;
+  const done = doneToday();
+  const lines = [
+    'Oh, Your Majesty. That sounds heavy, and it makes sense you feel that way.',
+    done ? `For what it's worth, ${done} thing${done > 1 ? 's' : ''} already got done today. That's real progress, even if it doesn't feel like it.` : 'Even showing up today counts. Truly.',
+    open ? `There ${open > 1 ? 'are' : 'is'} ${open} open task${open > 1 ? 's' : ''}. The court can carry them, and nothing urgent goes anywhere without you. Want me to push the non-urgent ones to tomorrow?` : 'Your list is clear, so this might be a good moment to rest.',
+    'Maybe a glass of water and five minutes away from the screen? The kingdom will still be here.',
+  ];
+  return lines.join(' ');
+}
+
+function queenPepTalk() {
+  const done = doneToday();
+  const total = liveTasks().filter(t => t.status === 'done').length;
+  const picks = [
+    'You built a whole kingdom to look after your life. That says a lot about you.',
+    'Progress, not perfection, Your Majesty. One task at a time is how every castle gets built.',
+    'You are allowed to be proud of yourself today.',
+    'The court believes in you, and so do I.',
+  ];
+  const tally = done ? `You've finished ${done} task${done > 1 ? 's' : ''} today.` : total ? `The court has finished ${total} task${total > 1 ? 's' : ''} for you so far.` : 'Every kingdom starts with a first quest.';
+  return `${picks[Math.floor(Math.random() * picks.length)]} ${tally} What's one small thing we can win next?`;
+}
+
+// Short lines the Queen says on her visits to the King's Keep.
+export function queenVisitLine() {
+  const done = doneToday();
+  const lines = done
+    ? [`${done} task${done > 1 ? 's' : ''} done today. I'm proud of you!`, `The court is thriving, Your Majesty: ${done} done today.`, 'Remember to take a break. You\'ve earned it.']
+    : ['Just checking on you, Your Majesty. How are you holding up?', 'Drink some water, my King. The court has things in hand.', 'Whatever today brings, you\'re not facing it alone.'];
+  return lines[Math.floor(Math.random() * lines.length)];
 }
 
 // ── Offline rules engine ─────────────────────────────────────
@@ -276,13 +413,16 @@ const titleFrom = (text) => {
 function offlineChat(agentId, text) {
   const me = agentById(agentId);
   const t = text.toLowerCase().trim();
+  if (CRISIS.test(t)) return crisisReply();             // any courtier: care first, never a task
+  if (me.kind === 'chief' && FEELINGS.test(t)) return queenComfort(t);
+  if (me.kind === 'chief' && /(pep talk|encourag|motivat|cheer me|proud)/.test(t)) return queenPepTalk();
   if (/^(hi|hey|hello|yo|sup|good (morning|afternoon|evening))\b/.test(t) && t.length < 25) {
     const n = openTasksFor(agentId).length;
     return `Greetings, Your Majesty! ${me.name}, ${me.role}, at your service. I have ${n} open task${n === 1 ? '' : 's'}. How may I serve?`;
   }
   if (/(status|what are you|update|how'?s it going|list)/.test(t)) {
     const open = me.kind === 'chief'
-      ? state.tasks.filter(x => x.status === 'todo' || x.status === 'doing')
+      ? liveTasks().filter(x => ['todo', 'doing', 'review', 'needs_approval'].includes(x.status))
       : openTasksFor(agentId);
     if (!open.length) return 'All is quiet in the realm: nothing open right now.';
     return 'The state of the realm, Your Majesty:\n' + open.slice(0, 8).map(x => `• ${agentById(x.owner)?.name}: ${x.title} (${x.status})`).join('\n');
@@ -338,7 +478,7 @@ function offlineWork(agentId, task) {
 function offlineTownhall(agentId, topic) {
   const me = agentById(agentId);
   const n = openTasksFor(agentId).length;
-  if (me.kind === 'chief') return `The court is in session. Topic: “${topic}”. Each of you, give the King a quick report and name anything that needs the royal seal.`;
+  if (me.kind === 'chief') return `The court is in session, and first: thank you all, and thank you, Your Majesty, for leading us. Topic: “${topic}”. Each of you, give the King a quick report and name anything that needs the royal seal.`;
   const lines = [
     `${me.name} reporting, Your Majesty: I have ${n} open task${n === 1 ? '' : 's'}.`,
     n ? 'All on course. I will report to the Queen as each one lands.' : 'I stand ready for any new quest.',
