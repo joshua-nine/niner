@@ -4,9 +4,9 @@ A D&D 5e character sheet and campaign tracker with a **Dungeon Crawler Carl**-in
 
 > Built by a veteran getting into tech — welcome to the dungeon.
 
-## Also in this repo: Agent Village
+## Also in this repo: Agent Kingdom
 
-A personal AI assistant team living in a pixel village, with a Chief of Staff, directors, interns, a Town Hall, and human-in-the-loop approvals. Run the local server below and open `/village/`. See [`village/README.md`](village/README.md).
+A personal AI assistant team living in a pixel fantasy kingdom: you're the King, Queen Elara is your Chief of Staff, and the court of wizards, a treasury dragon and royals does the work. Nothing is sent, posted or spent without your royal seal. Run the local server below and open `/village/`. See [`village/README.md`](village/README.md).
 
 ## Features
 - Full D&D 5e character sheets with auto-calculated modifiers, saving throws, skills, and passive perception

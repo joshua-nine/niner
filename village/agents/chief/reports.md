@@ -1,4 +1,4 @@
-# Reports to the Chief of Staff
+# Reports to the Queen (Chief of Staff)
 
-<!-- Directors append one line per finished task: date · who · what · result -->
+<!-- Each courtier appends one line per finished task: date · who · what · result -->
 

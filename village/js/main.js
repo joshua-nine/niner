@@ -4,6 +4,8 @@ import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, sa
 import { state, log } from './store.js';
 import { workOnTask } from './brain.js';
 import { initUI, ui, selectAgent } from './ui.js';
+import { drawWildDragon } from './sprites.js';
+import { DRAGON_PERCH } from './config.js';
 
 const canvas = document.getElementById('map');
 canvas.width = size.w; canvas.height = size.h;
@@ -21,8 +23,8 @@ initUI();
 ui.onSelect = () => {};
 
 if (!state.log.length) {
-  log('chief', 'Village founded. Talk to me (the Chief of Staff) to get started.', 'ok');
-  setTimeout(() => say('chief', `Welcome home, ${state.mayorName}! Click me to give the team work.`, 7), 1200);
+  log('chief', 'The kingdom is founded. Speak to me, the Queen, to get started.', 'ok');
+  setTimeout(() => say('chief', `Welcome home, Your Majesty! Click me to give the court its orders.`, 7), 1200);
 }
 
 // Night falls with your local clock.
@@ -34,6 +36,19 @@ function nightLevel() {
   return 0.45;
 }
 
+// A wild dragon circles the eastern peaks and now and then sweeps over the realm.
+const smooth = (x) => x * x * (3 - 2 * x);
+function wildDragon(now) {
+  const T = size.T, sec = now / 1000, cycle = sec % 60;
+  const sweep = cycle > 44 ? smooth(Math.min(1, (cycle - 44) / 3)) * smooth(Math.min(1, (60 - cycle) / 3)) : 0;
+  const cx = (DRAGON_PERCH.x + (24 - DRAGON_PERCH.x) * sweep) * T, cy = (DRAGON_PERCH.y + (14 - DRAGON_PERCH.y) * sweep) * T;
+  const rx = (4 + 14 * sweep) * T, ry = (1.8 + 8 * sweep) * T, a = sec * 0.7;
+  const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';                       // shadow far below
+  ctx.beginPath(); ctx.ellipse(x, y + 2.2 * T, 0.9 * T, 0.25 * T, 0, 0, Math.PI * 2); ctx.fill();
+  drawWildDragon(ctx, x, y, now, -Math.sin(a));
+}
+
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -43,6 +58,7 @@ function frame(now) {
   renderDynamic(ctx, now, night, busyHouses());
   if (night > 0) { ctx.fillStyle = `rgba(10,15,45,${night})`; ctx.fillRect(0, 0, size.w, size.h); }
   render(ctx, ui.selected);
+  wildDragon(now);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -1,4 +1,4 @@
-// Side panel: Talk, To-Do, Approvals, Town Hall, Village settings.
+// Side panel: Talk, To-Do, Approvals, Royal Court, Kingdom settings.
 import { GROUND_RULES } from './config.js';
 import {
   state, save, onChange, agentById, allPeople, addTask, updateTask, resolveApproval,
@@ -61,8 +61,9 @@ function renderChat() {
   const hist = state.chats[ui.selected] || [];
   if (!hist.length) logEl.append(h('div', { class: 'msg assistant' }, h('span', { class: 'from' }, p.name),
     p.kind === 'chief'
-      ? `Hi ${state.mayorName}, I'm your Chief of Staff. Tell me anything you need and I'll route it to the right director.`
-      : `Hi ${state.mayorName}! I'm ${p.name}, ${p.role}. What can I take off your plate?`));
+      ? `Your Majesty, I am ${p.name}, your Queen and Chief of Staff. Tell me what you need and I'll send it to the right member of the court.`
+      : p.look === 'dragon' ? `*a rumble of smoke* Your Majesty. I am ${p.name}, ${p.role}. Not a coin leaves my hoard without your seal. What do you need?`
+      : `Hail, Your Majesty! I am ${p.name}, ${p.role}. What may I take off your hands?`));
   for (const m of hist) logEl.append(h('div', { class: `msg ${m.role}` },
     h('span', { class: 'from' }, m.role === 'user' ? state.mayorName : p.name, ' · ', timeStr(m.ts)), m.text));
   if (typing.has(ui.selected)) logEl.append(h('div', { class: 'msg assistant typing' }, `${p.name} is thinking…`));
@@ -100,7 +101,7 @@ function renderTasks() {
   const list = state.tasks.filter(t => (!owner || t.owner === owner) && (
     status === 'all' || (status === 'open' ? (t.status === 'todo' || t.status === 'doing') : t.status === status)));
   const box = $('#task-list'); box.replaceChildren();
-  if (!list.length) box.append(h('p', { class: 'note' }, 'Nothing here. Ask the Chief of Staff for something, or add a task above.'));
+  if (!list.length) box.append(h('p', { class: 'note' }, 'Nothing here. Ask the Queen for something, or add a task above.'));
   for (const t of list.slice(0, 80)) {
     box.append(h('div', { class: 'card' },
       h('div', { class: 'card-top' }, h('span', { class: 'card-title' }, t.title), h('span', { class: `status ${t.status}` }, t.status.replace('_', ' '))),
@@ -164,7 +165,7 @@ function renderApprovals(force = false) {
   if (!force && sig === approvalsSig) return;
   approvalsSig = sig;
   const box = $('#approval-list'); box.replaceChildren();
-  if (!pending.length) box.append(h('p', { class: 'note' }, 'No approvals waiting. 🎉'));
+  if (!pending.length) box.append(h('p', { class: 'note' }, 'No petitions await your seal. 🎉'));
   for (const a of pending) {
     const inputs = {};
     const fields = (FIELDS[a.kind] || FIELDS.other).map(([k, label, big]) => {
@@ -179,9 +180,9 @@ function renderApprovals(force = false) {
       h('div', { class: 'card-top' }, chipFor(a.from), h('span', { class: 'meta' }, `${a.id}${a.taskId ? ' · ' + a.taskId : ''} · ${timeStr(a.created)}`)),
       ...fields,
       h('div', { class: 'btn-row' },
-        h('button', { class: 'btn btn-gold', onclick: () => { collect(); resolveApproval(a.id, true); carryOut(a); say(a.from, 'Thank you!', 3); } },
-          a.kind === 'email' ? 'Approve → open Gmail draft' : a.kind === 'calendar' ? 'Approve → open Calendar' : a.kind === 'post' ? 'Approve → copy post' : 'Approve'),
-        h('button', { class: 'btn btn-ghost', onclick: () => { resolveApproval(a.id, false); say(a.from, 'Understood, scrapping it.', 3); } }, 'Decline'),
+        h('button', { class: 'btn btn-gold', onclick: () => { collect(); resolveApproval(a.id, true); carryOut(a); say(a.from, 'Thank you, Your Majesty!', 3); } },
+          a.kind === 'email' ? '👑 Seal → open Gmail draft' : a.kind === 'calendar' ? '👑 Seal → open Calendar' : a.kind === 'post' ? '👑 Seal → copy post' : '👑 Approve'),
+        h('button', { class: 'btn btn-ghost', onclick: () => { resolveApproval(a.id, false); say(a.from, 'As you wish. It is struck.', 3); } }, 'Decline'),
       ),
     ));
   }
@@ -196,11 +197,11 @@ function renderApprovals(force = false) {
   $('#tab-badge').textContent = n; $('#tab-badge').classList.toggle('hidden', !n);
 }
 
-// ── Town Hall (Step 6) ───────────────────────────────────────
+// ── Royal Court (Step 6) ───────────────────────────────────────
 let meetingBusy = false;
 function renderTownhall() {
   const box = $('#th-log'); box.replaceChildren();
-  if (!state.townhall.length) box.append(h('p', { class: 'note' }, 'Call a meeting and everyone walks to the Town Hall. The Chief opens, then each director speaks in turn.'));
+  if (!state.townhall.length) box.append(h('p', { class: 'note' }, 'Summon the court and everyone gathers before the Great Hall. The Queen opens, then each member of the court speaks in turn.'));
   for (const m of state.townhall) {
     const p = agentById(m.from);
     if (m.from === 'topic') { box.append(h('div', { class: 'msg user' }, h('span', { class: 'from' }, `${state.mayorName} · topic`), m.text)); continue; }
@@ -218,7 +219,7 @@ async function runMeeting(e) {
   state.townhall = [{ from: 'topic', text: topic, ts: Date.now() }];
   save(); renderTownhall();
   startMeeting();
-  log('chief', `Town Hall called: ${topic}`, 'task');
+  log('chief', `The court is summoned: ${topic}`, 'task');
   await new Promise(r => setTimeout(r, 4500));          // let everyone walk over
   const speakers = ['chief', ...state.agents.filter(a => a.kind === 'director').map(a => a.id)];
   for (const id of speakers) {
@@ -241,11 +242,11 @@ function adjourn() {
   if (!inMeeting()) return;
   meetingBusy = false; endMeeting();
   $('#th-end').classList.add('hidden'); $('#th-start').disabled = false;
-  log('chief', 'Town Hall adjourned', 'info');
+  log('chief', 'The court is adjourned', 'info');
   renderTownhall();
 }
 
-// ── Village settings ─────────────────────────────────────────
+// ── Kingdom settings ─────────────────────────────────────────
 function renderSettings() {
   $('#set-name').value = state.mayorName;
   $('#set-key').value = state.settings.apiKey;
@@ -310,8 +311,8 @@ export function initUI() {
   $('#th-form').addEventListener('submit', runMeeting);
   $('#th-end').addEventListener('click', adjourn);
 
-  $('#set-name').addEventListener('change', e => { state.mayorName = e.target.value.trim() || 'Mayor'; save(); renderAll(); });
-  $('#set-key').addEventListener('change', e => { state.settings.apiKey = e.target.value.trim(); save(); toast(state.settings.apiKey ? 'Key saved — villagers now think with Claude.' : 'Key removed — offline mode.'); });
+  $('#set-name').addEventListener('change', e => { state.mayorName = e.target.value.trim() || 'The King'; save(); renderAll(); });
+  $('#set-key').addEventListener('change', e => { state.settings.apiKey = e.target.value.trim(); save(); toast(state.settings.apiKey ? 'Key saved. The court now thinks with Claude.' : 'Key removed. Offline mode.'); });
   $('#set-model').addEventListener('change', e => { state.settings.model = e.target.value; save(); });
   $('#set-effort').addEventListener('change', e => { state.settings.effort = e.target.value; save(); });
   $('#set-autowork').addEventListener('change', e => { state.settings.autoWork = e.target.checked; save(); });
@@ -319,18 +320,18 @@ export function initUI() {
   $('#ed-save').addEventListener('click', saveEditor);
   $('#export').addEventListener('click', () => {
     const blob = new Blob([exportState()], { type: 'application/json' });
-    const a = h('a', { href: URL.createObjectURL(blob), download: `agent-village-${new Date().toISOString().slice(0, 10)}.json` });
+    const a = h('a', { href: URL.createObjectURL(blob), download: `agent-kingdom-${new Date().toISOString().slice(0, 10)}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   });
   $('#import').addEventListener('change', async e => {
     const f = e.target.files[0]; if (!f) return;
-    try { importState(await f.text()); sims.clear(); initAgents(); renderSettings(); toast('Village imported.'); }
+    try { importState(await f.text()); sims.clear(); initAgents(); renderSettings(); toast('Kingdom restored.'); }
     catch (err) { toast(`Import failed: ${err.message}`); }
     e.target.value = '';
   });
   $('#reset').addEventListener('click', () => {
-    if (!confirm('Reset tasks, chats, approvals and team edits? Your API key is kept.')) return;
-    resetVillage(); sims.clear(); initAgents(); renderSettings(); toast('Fresh village.');
+    if (!confirm('Reset tasks, chats, petitions and court edits? Your API key is kept.')) return;
+    resetVillage(); sims.clear(); initAgents(); renderSettings(); toast('A fresh kingdom.');
   });
 
   renderSettings();

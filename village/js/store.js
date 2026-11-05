@@ -2,6 +2,7 @@
 import { DEFAULT_AGENTS, MAYOR } from './config.js';
 
 const KEY = 'agent-village-v1';
+const VERSION = 2;   // 2 = the Kingdom
 const listeners = new Set();
 
 function fresh() {
@@ -16,6 +17,7 @@ function fresh() {
     settings: { apiKey: '', model: 'claude-opus-5-5', effort: 'low', autoWork: true },
     usage: { input: 0, output: 0, cost: 0, calls: 0 },
     seq: 1,
+    version: VERSION,
   };
 }
 
@@ -23,8 +25,16 @@ function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh();
-    const s = { ...fresh(), ...JSON.parse(raw) };
+    const saved = JSON.parse(raw);
+    const s = { ...fresh(), ...saved };
     s.settings = { ...fresh().settings, ...s.settings };
+    // Village → Kingdom: bring in the new court, keep tasks/chats/settings.
+    if ((saved.version || 1) < VERSION) {
+      s.agents = structuredClone(DEFAULT_AGENTS);
+      if (!s.mayorName || s.mayorName === 'Mayor') s.mayorName = MAYOR.name;
+      s.version = VERSION;
+      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage unavailable */ }
+    }
     return s;
   } catch { return fresh(); }
 }

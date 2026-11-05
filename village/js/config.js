@@ -1,22 +1,25 @@
 // ─────────────────────────────────────────────────────────────
-//  AGENT VILLAGE — configuration
-//  Edit this file (or use the in-app "Village" tab) to make the
-//  village yours. It is meant to evolve week to week.
+//  AGENT KINGDOM: configuration
+//  Edit this file (or use the in-app "Kingdom" tab) to make the
+//  realm yours. It is meant to evolve week to week.
+//
+//  Internal ids are unchanged from the village version ("mayor" is
+//  you, "chief" is your Chief of Staff) so saved tasks keep working.
 // ─────────────────────────────────────────────────────────────
 
-// Step 1 — Ground rules. Every agent's system prompt starts with these.
+// Step 1: Ground rules. Every agent's system prompt starts with these.
 // They are also enforced in code (agents have no tool that can send,
-// post, spend or book anything — they can only *request approval*).
+// post, spend or book anything; they can only *petition for approval*).
 export const GROUND_RULES = [
-  'The Mayor (the human) is always in charge. You advise and prepare; the Mayor decides.',
-  'NEVER send an email, post publicly, spend money, sign up for anything, or book/accept a meeting yourself.',
-  'Anything that leaves the village (email, social post, purchase, calendar invite) must go through request_approval with the full draft attached.',
-  'Be honest about what you did and did not do. Never claim an action happened unless the Mayor approved it.',
-  'Stay in your lane: handle your own department; hand other work to the Chief of Staff.',
-  'Keep replies short and concrete: what you understood, what you will do, what you need from the Mayor.',
+  'The King (the human) is always in charge. You advise and prepare; the King decides.',
+  'NEVER send an email, post publicly, spend gold (money), sign up for anything, or book/accept a meeting yourself.',
+  'Anything that leaves the kingdom (email, social post, purchase, calendar invite) must go through request_approval with the full draft attached, so the King can set the royal seal on it.',
+  'Be honest about what you did and did not do. Never claim an action happened unless the King approved it.',
+  'Stay in your lane: handle your own domain; hand other work to the Queen (Chief of Staff).',
+  'Keep replies short and concrete: what you understood, what you will do, what you need from the King. A light medieval flavour is welcome; vagueness is not.',
 ];
 
-// Step 1 — Style guide used when drawing the world (see STYLE_GUIDE.md).
+// Step 1: Style guide used when drawing the world (see STYLE_GUIDE.md).
 export const STYLE = {
   grass: ['#5fae4e', '#58a548', '#64b553'],
   path: '#d8b77a',
@@ -27,123 +30,144 @@ export const STYLE = {
   waterDeep: '#3b8cc6',
   tree: ['#2f7d3a', '#3a8f45', '#276b31'],
   trunk: '#7a4e2d',
+  stone: '#a9a39a',
+  stoneDark: '#8a847b',
+  stoneLight: '#c4beb4',
+  mountain: ['#7d7368', '#8c8276', '#6e655b'],
+  snow: '#f4f6fb',
   wall: '#f3e6cc',
   wallShade: '#dccaa6',
-  door: '#7a4e2d',
-  window: '#9fd3f5',
+  door: '#5a3a22',
+  gold: '#ffd23f',
+  window: '#2b2b40',
   windowLit: '#ffd77a',
   outline: '#2b2b33',
   skin: ['#f5d0a9', '#e0ac7e', '#c68642', '#8d5524', '#f1c27d'],
 };
 
-// Step 2 — You. The human. Rename yourself in the Village tab.
+// Step 2: You. The King. Rename yourself in the Kingdom tab.
 export const MAYOR = {
   id: 'mayor',
-  name: 'Mayor',
-  role: 'You — the human in charge',
-  shirt: '#ffd23f',
+  name: 'The King',
+  role: 'You: the King, ruler of the realm',
+  look: 'king',
+  shirt: '#7b1e3a',        // royal robe
+  cape: '#b3132c',
   hair: '#3b2a20',
   skin: 1,
   house: 'mayor',
   kind: 'mayor',
 };
 
-// Step 2 + 3 — Chief of Staff and Directors.
+// Step 2 + 3: The Queen (Chief of Staff) and the Court (directors).
+// `look` picks the sprite: queen, wizard, dragon, princess, prince,
+// duchess, owl, whelp, apprentice, squire, jester.
 // `keywords` are used by the offline router (no API key) to decide who
 // gets a request. `tools` are the real-world integrations a director is
-// *allowed to prepare drafts for* — never execute.
+// *allowed to prepare drafts for*, never execute.
 export const DEFAULT_AGENTS = [
   {
-    id: 'chief', name: 'Matt', kind: 'chief', house: 'chief',
-    role: 'Chief of Staff',
-    shirt: '#2d3047', hair: '#1b1b1b', skin: 0,
+    id: 'chief', name: 'Queen Elara', kind: 'chief', look: 'queen', house: 'chief',
+    role: 'Queen & Chief of Staff',
+    shirt: '#5b2a86', hair: '#2a1a12', skin: 0,
     keywords: [],
     tools: ['todo'],
     instructions:
-      'You are the Mayor\'s Chief of Staff. You receive every request first, break it into tasks, and assign each task to the right director with add_todo. ' +
-      'You keep the big picture, chase overdue work, and summarise the day. Only do a task yourself if no director fits.',
+      'You are the Queen and the King\'s Chief of Staff. Every royal request reaches you first. Break it into tasks and assign each to the right member of the court with add_todo. ' +
+      'You keep the big picture, chase overdue work, and summarise the day for the King. Only do a task yourself if nobody at court fits.',
   },
   {
-    id: 'inbox', name: 'Iris', kind: 'director', house: 'inbox',
-    role: 'Director of Inbox & Comms',
-    shirt: '#e4572e', hair: '#6b3e26', skin: 4,
-    keywords: ['email', 'inbox', 'reply', 'message', 'gmail', 'write to', 'respond', 'newsletter'],
+    id: 'inbox', name: 'Iris', kind: 'director', look: 'wizard', house: 'inbox',
+    role: 'Court Wizard of Messages',
+    shirt: '#3a5bd9', hat: '#2b44a8', hair: '#d8d8e0', skin: 4,
+    keywords: ['email', 'inbox', 'reply', 'message', 'gmail', 'write to', 'respond', 'newsletter', 'letter'],
     tools: ['gmail-draft', 'todo'],
     instructions:
-      'You own the Mayor\'s inbox. Triage, summarise, and draft replies. Every outgoing email is a request_approval of kind "email" with to/subject/body filled in.',
-    intern: { id: 'inbox-intern', name: 'Pip', shirt: '#f19a7b', hair: '#d9a066', skin: 0 },
+      'You keep the Owl Post: the King\'s inbox. Triage, summarise, and draft replies. Every outgoing email is a request_approval of kind "email" with to/subject/body filled in.',
+    intern: { id: 'inbox-intern', name: 'Pip', look: 'owl', shirt: '#a07850', hair: '#6b4a2a', skin: 0 },
   },
   {
-    id: 'calendar', name: 'Cal', kind: 'director', house: 'calendar',
-    role: 'Director of Time & Calendar',
-    shirt: '#17bebb', hair: '#2a2a2a', skin: 2,
+    id: 'calendar', name: 'Cal', kind: 'director', look: 'wizard', house: 'calendar',
+    role: 'Wizard of Time & Calendar',
+    shirt: '#138a87', hat: '#0e6866', hair: '#9a9a9a', skin: 2,
     keywords: ['meeting', 'calendar', 'schedule', 'appointment', 'call', 'book', 'remind', 'tomorrow', 'week'],
     tools: ['calendar-draft', 'todo'],
     instructions:
-      'You protect the Mayor\'s time. Plan the day, find slots, and prepare calendar events. Every event or invite is a request_approval of kind "calendar" with when and duration_minutes.',
-    intern: { id: 'calendar-intern', name: 'Tick', shirt: '#7fe0de', hair: '#5a3b2a', skin: 1 },
+      'You guard the King\'s hours from the Time Tower. Plan the day, find slots, and prepare calendar events. Every event or invite is a request_approval of kind "calendar" with when and duration_minutes.',
+    intern: { id: 'calendar-intern', name: 'Tick', look: 'apprentice', shirt: '#5fd0cd', hair: '#5a3b2a', skin: 1 },
   },
   {
-    id: 'money', name: 'Penny', kind: 'director', house: 'money',
-    role: 'Director of Money',
-    shirt: '#2e933c', hair: '#c9a227', skin: 0,
-    keywords: ['money', 'budget', 'pay', 'bill', 'buy', 'purchase', 'invoice', 'subscription', '$', 'cost', 'price'],
+    id: 'money', name: 'Penny', kind: 'director', look: 'dragon', house: 'money',
+    role: 'Treasury Dragon',
+    shirt: '#2e933c', belly: '#e9d58a', hair: '#1e6b2a', skin: 0,
+    keywords: ['money', 'budget', 'pay', 'bill', 'buy', 'purchase', 'invoice', 'subscription', '$', 'cost', 'price', 'gold'],
     tools: ['todo'],
     instructions:
-      'You track bills, budgets and subscriptions. You may research and recommend, but every purchase or payment is a request_approval of kind "spend" with amount filled in.',
-    intern: { id: 'money-intern', name: 'Nickel', shirt: '#8fd694', hair: '#2a2a2a', skin: 3 },
+      'You are the dragon who guards the royal treasury from the mountain hoard. You track bills, budgets and subscriptions and you hate waste. You may research and recommend, but every purchase or payment is a request_approval of kind "spend" with amount filled in.',
+    intern: { id: 'money-intern', name: 'Nickel', look: 'whelp', shirt: '#c0392b', belly: '#f5c78a', hair: '#8e2a20', skin: 0 },
   },
   {
-    id: 'content', name: 'Echo', kind: 'director', house: 'content',
-    role: 'Director of Content & Social',
-    shirt: '#9c51b6', hair: '#111111', skin: 1,
-    keywords: ['post', 'tweet', 'social', 'linkedin', 'instagram', 'content', 'video', 'blog', 'caption', 'youtube'],
+    id: 'content', name: 'Princess Echo', kind: 'director', look: 'princess', house: 'content',
+    role: 'Royal Herald (Content & Social)',
+    shirt: '#e05a9a', hair: '#e8c15a', skin: 1,
+    keywords: ['post', 'tweet', 'social', 'linkedin', 'instagram', 'content', 'video', 'blog', 'caption', 'youtube', 'announce'],
     tools: ['todo'],
     instructions:
-      'You plan and draft content. Every public post is a request_approval of kind "post" with platform and body. Never post yourself.',
-    intern: { id: 'content-intern', name: 'Reel', shirt: '#c99ad6', hair: '#d9a066', skin: 4 },
+      'You are the Royal Herald: you plan and draft the kingdom\'s proclamations (content and social posts). Every public post is a request_approval of kind "post" with platform and body. Never post yourself.',
+    intern: { id: 'content-intern', name: 'Reel', look: 'jester', shirt: '#9c51b6', hair: '#d9a066', skin: 4 },
   },
   {
-    id: 'health', name: 'Sage', kind: 'director', house: 'health',
-    role: 'Director of Health & Home',
-    shirt: '#f4a259', hair: '#4a2c1a', skin: 3,
+    id: 'health', name: 'Duchess Sage', kind: 'director', look: 'duchess', house: 'health',
+    role: 'Duchess of the Hearth (Health & Home)',
+    shirt: '#d9822b', hair: '#4a2c1a', skin: 3,
     keywords: ['gym', 'workout', 'health', 'doctor', 'sleep', 'food', 'meal', 'grocery', 'home', 'chores', 'family'],
     tools: ['todo'],
     instructions:
-      'You look after the Mayor\'s health, home and family logistics: workouts, meals, groceries, chores, appointments. Purchases need spend approval; appointments go via the calendar director.',
-    intern: { id: 'health-intern', name: 'Sprout', shirt: '#f8c58c', hair: '#2a2a2a', skin: 0 },
+      'You look after the King\'s health, household and family logistics: training, meals, provisions, chores, appointments. Purchases need spend approval; appointments go via the Wizard of Time.',
+    intern: { id: 'health-intern', name: 'Sprout', look: 'squire', shirt: '#f8c58c', hair: '#2a2a2a', skin: 0 },
   },
   {
-    id: 'projects', name: 'Dex', kind: 'director', house: 'projects',
-    role: 'Director of Projects & Learning',
-    shirt: '#3d5a80', hair: '#8b5a2b', skin: 4,
-    keywords: ['project', 'code', 'learn', 'study', 'course', 'research', 'idea', 'build', 'website', 'app', 'class'],
+    id: 'projects', name: 'Prince Dex', kind: 'director', look: 'prince', house: 'projects',
+    role: 'Prince of Quests (Projects & Learning)',
+    shirt: '#2f4f8f', cape: '#1d3461', hair: '#8b5a2b', skin: 4,
+    keywords: ['project', 'code', 'learn', 'study', 'course', 'research', 'idea', 'build', 'website', 'app', 'class', 'quest'],
     tools: ['todo'],
     instructions:
-      'You run the Mayor\'s side projects and learning: break big goals into weekly steps, research, and keep notes. Anything external still needs approval.',
-    intern: { id: 'projects-intern', name: 'Byte', shirt: '#98c1d9', hair: '#111111', skin: 2 },
+      'You lead the King\'s quests: side projects and learning. Break big goals into weekly steps, research, and keep notes. Anything external still needs approval.',
+    intern: { id: 'projects-intern', name: 'Byte', look: 'squire', shirt: '#98c1d9', hair: '#111111', skin: 2 },
   },
 ];
 
-// Step 1 — The village map. 48 × 30 tiles.
+// Step 1: The kingdom map. 48 × 30 tiles.
 export const MAP = { cols: 48, rows: 30, tile: 16, scale: 2 };
 
 // Buildings: x,y = top-left tile, w,h in tiles. Door is on the bottom wall.
+// kind: castle | keep | tower (wizard) | lair (dragon) | manor (royals)
 export const BUILDINGS = [
-  { id: 'townhall', x: 19, y: 1, w: 10, h: 6, door: 23, label: 'TOWN HALL', roof: '#8c2f39', kind: 'townhall' },
-  { id: 'mayor',    x: 21, y: 22, w: 6, h: 5, door: 23, label: 'MAYOR', roof: '#d4a017', kind: 'house' },
-  { id: 'chief',    x: 30, y: 17, w: 5, h: 4, door: 32, label: 'CHIEF OF STAFF', roof: '#2d3047', kind: 'office' },
-  { id: 'inbox',    x: 3,  y: 2,  w: 5, h: 4, door: 5,  label: 'INBOX', roof: '#e4572e', kind: 'house' },
-  { id: 'calendar', x: 3,  y: 10, w: 5, h: 4, door: 5,  label: 'CALENDAR', roof: '#17bebb', kind: 'house' },
-  { id: 'money',    x: 3,  y: 19, w: 5, h: 4, door: 5,  label: 'MONEY', roof: '#2e933c', kind: 'house' },
-  { id: 'content',  x: 40, y: 2,  w: 5, h: 4, door: 42, label: 'CONTENT', roof: '#9c51b6', kind: 'house' },
-  { id: 'health',   x: 40, y: 10, w: 5, h: 4, door: 42, label: 'HEALTH', roof: '#f4a259', kind: 'house' },
-  { id: 'projects', x: 40, y: 19, w: 5, h: 4, door: 42, label: 'PROJECTS', roof: '#3d5a80', kind: 'house' },
+  { id: 'townhall', x: 19, y: 1, w: 10, h: 6, door: 23, label: 'GREAT HALL', roof: '#8c2f39', kind: 'castle' },
+  { id: 'mayor',    x: 21, y: 22, w: 6, h: 5, door: 23, label: "KING'S KEEP", roof: '#d4a017', kind: 'keep' },
+  { id: 'chief',    x: 30, y: 17, w: 5, h: 4, door: 32, label: "QUEEN'S TOWER", roof: '#5b2a86', kind: 'manor' },
+  { id: 'money',    x: 3,  y: 2,  w: 5, h: 4, door: 5,  label: "DRAGON'S HOARD", roof: '#2e933c', kind: 'lair' },
+  { id: 'calendar', x: 3,  y: 10, w: 5, h: 4, door: 5,  label: 'TIME TOWER', roof: '#138a87', kind: 'tower' },
+  { id: 'inbox',    x: 3,  y: 19, w: 5, h: 4, door: 5,  label: 'OWL POST', roof: '#3a5bd9', kind: 'tower' },
+  { id: 'content',  x: 40, y: 2,  w: 5, h: 4, door: 42, label: "HERALD'S HALL", roof: '#e05a9a', kind: 'manor' },
+  { id: 'health',   x: 40, y: 10, w: 5, h: 4, door: 42, label: 'HEARTH MANOR', roof: '#d9822b', kind: 'manor' },
+  { id: 'projects', x: 40, y: 19, w: 5, h: 4, door: 42, label: 'QUEST KEEP', roof: '#2f4f8f', kind: 'manor' },
 ];
 
-export const PLAZA = { x: 18, y: 9, w: 12, h: 6 };
+export const PLAZA = { x: 18, y: 9, w: 12, h: 6 };      // the Royal Courtyard
 export const FOUNTAIN = { x: 23, y: 11, w: 2, h: 2 };
-export const POND = { x: 10, y: 24, w: 7, h: 4 };
+export const POND = { x: 10, y: 24, w: 7, h: 4 };       // the Royal Lake
+
+// Mountain ranges (tiles that become impassable peaks).
+export const MOUNTAIN_ZONES = [
+  (x, y) => (x <= 12 && y <= 1) || (x <= 1 && y <= 9) || (x === 8 && y >= 2 && y <= 4) || (x === 2 && y >= 2 && y <= 6),
+  (x, y) => y === 0 && x >= 30,
+  (x, y) => x >= 46 && y <= 9,
+  (x, y) => (x >= 29 && y >= 25) || (x >= 46 && y >= 16),
+];
+// Where the wild dragon circles (tile coordinates).
+export const DRAGON_PERCH = { x: 38, y: 27 };
 
 // Approximate public API prices ($ per 1M tokens) for the spend meter.
 export const PRICES = {

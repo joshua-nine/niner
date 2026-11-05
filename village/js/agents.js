@@ -1,16 +1,18 @@
-// Step 4 — Make them move. Each villager runs a small state machine:
+// Step 4: Make them move. Each courtier runs a small state machine:
 //   idle → choose a goal → walk (A*, yielding to others) → do the thing.
-// Directors walk home to work on tasks, then report to the Chief.
-// The Chief carries pending approvals to the Mayor's door.
-// Interns run errands while their director works.
+// Directors walk home to work on tasks, then report to the Queen.
+// The Queen carries petitions awaiting the royal seal to the King's Keep.
+// Apprentices, squires, the owl and the whelp run errands meanwhile.
 import { MAP } from './config.js';
 import { doorSpot, walkable, plazaSpots, meetingSpots, randomWalkableNear, size } from './world.js';
 import { findPath, tileKey } from './path.js';
-import { drawPerson, drawLabel, drawBubble, drawIcon } from './sprites.js';
+import { drawPerson, drawLabel, drawBubble, drawIcon, spriteHeight } from './sprites.js';
 import { state, allPeople, agentById, openTasksFor, updateTask, pendingApprovals, log } from './store.js';
 
 const T = size.T, S = MAP.scale;
 const WORK_SECONDS = 22;
+const WORK_ICON = { wizard: '🔮', apprentice: '🔮', dragon: '💰', whelp: '💰', owl: '✉️', queen: '📜', princess: '📯', prince: '🗺️', duchess: '🍲', squire: '🛡️', jester: '🎭' };
+const ROYAL = new Set(['queen', 'princess', 'prince', 'duchess']);
 
 export const sims = new Map();
 export const hooks = { onTaskWorked: async () => {} };
@@ -100,7 +102,7 @@ function plan(s) {
   const task = openTasksFor(p.id)[0];
   if (task && p.kind !== 'mayor') {
     goTo(s, homeSpot(p), () => {
-      s.state = 'work'; s.task = task.id; s.icon = '💻'; s.dir = 'up';
+      s.state = 'work'; s.task = task.id; s.icon = WORK_ICON[p.look] || '📜'; s.dir = 'up';
       updateTask(task.id, { status: 'doing' });
     }, { exact: p.kind === 'director' });
     return;
@@ -112,12 +114,12 @@ function plan(s) {
       goTo(s, doorSpot('mayor'), () => {
         s.lastDelivery = performance.now();
         s.icon = '📋';
-        say(s.id, `${pending} approval${pending > 1 ? 's' : ''} waiting for you, ${state.mayorName}.`, 5);
+        say(s.id, `Your Majesty, ${pending} petition${pending > 1 ? 's await' : ' awaits'} your royal seal.`, 5);
         rest(s, 4, 6);
       });
       return;
     }
-    if (Math.random() < 0.5) goTo(s, homeSpot(p), () => { s.icon = '🗂️'; rest(s, 5, 10); });
+    if (Math.random() < 0.5) goTo(s, homeSpot(p), () => { s.icon = '📜'; rest(s, 5, 10); });
     else goTo(s, pick(plazaSpots()), () => rest(s, 3, 7));
     return;
   }
@@ -128,7 +130,7 @@ function plan(s) {
     else if (r < 0.8) goTo(s, pick(plazaSpots()), () => rest(s, 3, 8));
     else {
       const other = pick(state.agents.filter(a => a.id !== p.id));
-      goTo(s, doorSpot(other.house), () => { say(s.id, pick(['Got a minute?', 'Syncing up!', 'How\'s your list?', 'Coffee?']), 3); rest(s, 3, 5); });
+      goTo(s, doorSpot(other.house), () => { say(s.id, pick(['A word, friend?', 'How fares your list?', 'Hail and well met!', 'Mead later?', 'Any news from court?']), 3); rest(s, 3, 5); });
     }
     return;
   }
@@ -137,7 +139,7 @@ function plan(s) {
     const boss = sims.get(p.boss);
     if (boss && boss.state === 'work') {
       const b = pick(['townhall', 'chief', ...state.agents.map(a => a.house)]);
-      goTo(s, doorSpot(b), () => { s.icon = '📦'; rest(s, 1, 3); });
+      goTo(s, doorSpot(b), () => { s.icon = '✉️'; rest(s, 1, 3); });
     } else if (boss) {
       goTo(s, { x: boss.tx, y: boss.ty + 1 }, () => rest(s, 2, 5));
     } else rest(s, 2, 4);
@@ -173,10 +175,10 @@ async function finishWork(s, task) {
   try { summary = await hooks.onTaskWorked(s.id, task); }
   catch (e) { summary = `Hit a snag: ${e.message}`; log(s.id, `Error while working: ${e.message}`, 'warn'); }
   // Report to the Chief of Staff in person.
-  s.icon = '📨';
+  s.icon = '📯';
   goTo(s, doorSpot('chief'), () => {
     say(s.id, summary ? `Report: ${summary}` : `Finished “${task.title}”.`, 5);
-    say('chief', 'Thanks — logged it.', 3);
+    say('chief', 'Well done. It is recorded.', 3);
     rest(s, 3, 5);
   });
 }
@@ -197,6 +199,7 @@ function stepWalk(s, dt) {
     s.wait = 0;
     s.next = s.path.shift();
     s.dir = s.next.x > s.tx ? 'right' : s.next.x < s.tx ? 'left' : s.next.y > s.ty ? 'down' : 'up';
+    if (s.dir === 'left' || s.dir === 'right') s.face = s.dir;
   }
   const dx = s.next.x - s.x, dy = s.next.y - s.y;
   const dist = Math.hypot(dx, dy), stepLen = s.speed * dt;
@@ -217,7 +220,7 @@ export function startMeeting() {
 export function endMeeting() { meeting = null; }
 export const inMeeting = () => !!meeting;
 
-// Mayor can be steered by clicking the map.
+// The King can be steered by clicking the map.
 export function moveMayorTo(tile) {
   const s = sims.get('mayor');
   if (s && walkable(tile.x, tile.y)) goTo(s, tile, () => rest(s, 15, 25));
@@ -242,10 +245,11 @@ export function render(ctx, selectedId) {
       ctx.strokeStyle = '#00ff88'; ctx.lineWidth = S;
       ctx.beginPath(); ctx.ellipse(cx, by - S, 7 * S, 2.6 * S, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    drawPerson(ctx, cx, by, p, s.dir, frame, p.kind === 'intern');
-    const labelColor = p.kind === 'mayor' ? '#ffd23f' : p.kind === 'chief' ? '#9ad1ff' : '#ffffff';
+    const sideways = p.look === 'dragon' || p.look === 'whelp';     // dragons are drawn side-on
+    drawPerson(ctx, cx, by, p, sideways ? (s.face || 'right') : s.dir, frame, p.kind === 'intern');
+    const labelColor = p.kind === 'mayor' ? '#ffd23f' : ROYAL.has(p.look) ? '#f7c6ff' : p.look === 'wizard' ? '#9ad1ff' : p.look === 'dragon' ? '#9cf09c' : '#ffffff';
     drawLabel(ctx, cx, by + 4 * S, p.name, labelColor);
-    const headY = by - (p.kind === 'intern' ? 17 : 22) * S;
+    const headY = by - spriteHeight(p, p.kind === 'intern') + 2 * S;
     if (s.state === 'work') {
       const task = state.tasks.find(t => t.id === s.task);
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(cx - 8 * S, headY - 12 * S, 16 * S, 2 * S);
