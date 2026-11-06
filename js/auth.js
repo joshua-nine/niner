@@ -85,6 +85,10 @@ function friendlyAuthError(code) {
     'auth/weak-password':        'Password is too weak.',
     'auth/too-many-requests':    'Too many attempts. Try again later.',
     'auth/invalid-credential':   'Invalid email or password.',
+    'auth/configuration-not-found': 'Sign-in is not switched on yet. In Firebase: Authentication → Get started → Email/Password → Enable.',
+    'auth/operation-not-allowed':   'Email/password sign-in is turned off. In Firebase: Authentication → Sign-in method → Email/Password → Enable.',
+    'auth/unauthorized-domain':     'This website is not allowed to sign in yet. In Firebase: Authentication → Settings → Authorized domains → add this site.',
+    'auth/network-request-failed':  'No connection. Check your internet and try again.',
   };
   return map[code] || 'Authentication error. Please try again.';
 }

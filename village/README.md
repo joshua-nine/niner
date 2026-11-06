@@ -47,7 +47,7 @@ Sign in under **Kingdom → Your devices** with the same email and password on e
 - On your phone, use *Add to Home Screen* to get a Kingdom app icon.
 
 **One-time setup** (in the [Firebase console](https://console.firebase.google.com) for the project in `js/firebase-config.js`):
-1. **Firestore rules:** add this inside `match /databases/{database}/documents { … }`, so each person can only read and write their own kingdom:
+1. **Firestore rules:** the easiest way is to paste the whole [`firestore.rules`](../firestore.rules) file from the repo root into Firestore → Rules and click Publish (it covers NinerSheet too). Or add just this inside `match /databases/{database}/documents { … }`, so each person can only read and write their own kingdom:
    ```
    match /kingdoms/{uid} {
      allow read, write: if request.auth != null && request.auth.uid == uid;
