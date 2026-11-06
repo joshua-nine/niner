@@ -24,6 +24,7 @@ hooks.canWork = () => sync.leader;          // only one of your devices runs the
 hooks.visitLine = queenVisitLine;
 onChange(() => initAgents());               // the court may change on another device
 initUI();
+window.__kingdomBooted = true;          // tells the start-up safety net all is well
 ui.onSelect = () => {};
 initSync();
 
