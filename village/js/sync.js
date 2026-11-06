@@ -198,6 +198,8 @@ export function friendlyAuthError(e) {
   if (c.includes('weak-password')) return 'Use at least 6 characters for the password.';
   if (c.includes('invalid-email')) return 'That email address looks wrong.';
   if (c.includes('network')) return 'No connection. Try again when you\'re online.';
-  if (c.includes('unauthorized-domain') || c.includes('operation-not-allowed')) return 'Sign-in isn\'t enabled for this website yet. See the README setup steps.';
+  if (c.includes('configuration-not-found')) return 'Sign-in is not switched on yet. In Firebase: Authentication → Get started → Email/Password → Enable.';
+  if (c.includes('operation-not-allowed')) return 'Email/password sign-in is turned off. In Firebase: Authentication → Sign-in method → Email/Password → Enable.';
+  if (c.includes('unauthorized-domain')) return 'This website is not allowed to sign in yet. In Firebase: Authentication → Settings → Authorized domains → add this site.';
   return e?.message || String(e);
 }

@@ -21,13 +21,13 @@ import { getAuth }        from "https://www.gstatic.com/firebasejs/12.13.0/fireb
 import { getFirestore }   from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey:            "AIzaSyBSWFYfRiSw4n-UYwszaGKTjvdPjlTyPjc",
-  authDomain:        "dcc-campaign.firebaseapp.com",
-  projectId:         "dcc-campaign",
-  storageBucket:     "dcc-campaign.firebasestorage.app",
-  messagingSenderId: "328123402638",
-  appId:             "1:328123402638:web:df0027e87e5fa277fb3cdf",
-  measurementId:     "G-BFT9RX75D0"
+  apiKey:            "AIzaSyAzGR2d9TlFTDCSDM0V9uTm4E4XjqfYu4w",
+  authDomain:        "dragon-8170d.firebaseapp.com",
+  projectId:         "dragon-8170d",
+  storageBucket:     "dragon-8170d.firebasestorage.app",
+  messagingSenderId: "169416444296",
+  appId:             "1:169416444296:web:a4ed0ad2974d40292b523d",
+  measurementId:     "G-S9HXVRSWHC"
 };
 
 const app  = initializeApp(firebaseConfig);
