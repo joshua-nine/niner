@@ -4,6 +4,10 @@ A D&D 5e character sheet and campaign tracker with a **Dungeon Crawler Carl**-in
 
 > Built by a veteran getting into tech — welcome to the dungeon.
 
+## Also in this repo: Agent Kingdom
+
+A personal AI assistant team living in a pixel fantasy kingdom: you're the King, Queen Elara is your moral support and supervises every task, and the court of wizards, a treasury dragon and royals does the work. It syncs between your phone and computer. Nothing is sent, posted or spent without your royal seal. Run the local server below and open `/village/`. See [`village/README.md`](village/README.md).
+
 ## Features
 - Full D&D 5e character sheets with auto-calculated modifiers, saving throws, skills, and passive perception
 - Campaign tracker: session logs, NPC roster, locations, quest log
@@ -87,6 +91,10 @@ service cloud.firestore {
     match /campaigns/{campId} {
       allow read, write: if request.auth.uid in resource.data.members;
       allow create: if request.auth != null;
+    }
+
+    match /kingdoms/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     match /invites/{inviteId} {
