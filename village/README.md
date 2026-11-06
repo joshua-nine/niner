@@ -49,6 +49,18 @@ To bring in an existing tracker, use **Import** with a tracker file (`kind: "age
 - **Download / import:** pick **Everything, Bills, Spending, Income or Accounts**, then **⬇ Download**, which saves a CSV that opens in Excel or Google Sheets. **Import CSV** reads one back (or a bank export with Date / Description / Amount columns) and skips duplicates.
 - **Bookkeeping only:** a request like *“buy dog food for $20”* stays a task, and the purchase comes to you as a petition. Nothing in the Treasury spends money.
 
+## 🔗 Keep your Google Sheet in sync
+The Treasury can keep a Google Sheet up to date through a small bridge script ([`sheets-bridge/Code.gs`](sheets-bridge/Code.gs)) that runs inside your spreadsheet.
+- **What it writes:** four tabs it owns, **Kingdom – Bills / Spending / Accounts / Income**, rewritten on each sync. In your **Recurring Bills** tab it adds one **“Paid <Month Year>”** column per month, to the right of your headers, and ticks ✓ the bills marked paid. No other cell in your tabs is written.
+- **When:** a few seconds after any change, from the device that runs the court; or tap **⬆ Send now**.
+- **Pull from sheet:** reads your Recurring Bills, Accounts & Balances and Income & Cash Flow tabs and updates the Treasury. Nothing is deleted, and paid ticks are kept.
+- **Setup (about 5 minutes):**
+  1. Go to Treasury → **Google Sheet** → **Copy the bridge script**. Your secret key is already filled in.
+  2. In your sheet, open **Extensions → Apps Script**, replace everything, paste, and click Save.
+  3. Click **Deploy → New deployment → Web app**, with *Execute as: Me* and *Who has access: Anyone*. Click Deploy and allow access. If Google says the app isn't verified, choose *Advanced → Go to project*; it's your own script.
+  4. Paste the **Web app URL** into the kingdom and tap **Test connection**.
+- Requests need the key, so the link alone doesn't let anyone else into your sheet. **New key** under *Key & advanced* rotates it; paste the script again after rotating.
+
 ## Use it on your phone and computer (nothing lost)
 Sign in under **Kingdom → Your devices** with the same email and password on each device (your NinerSheet account works). Then:
 - Tasks, petitions, chats, the court and your settings sync in real time through your Firebase account.
@@ -109,6 +121,8 @@ village/
 │   ├── store.js    tasks, approvals, chats, settings, device merge
 │   ├── sync.js     phone ⇄ computer sync (Firebase), who runs the court
 │   ├── treasury.js / household.js / treasury-ui.js   the Royal Treasury: spending, bills, income, accounts
+│   ├── sheets.js   sends the Treasury to your Google Sheet / pulls it back
+├── sheets-bridge/Code.gs   the Apps Script you paste into your sheet
 │   ├── ui.js       side panel
 │   └── main.js     boot + game loop
 ├── CLAUDE.md, RULES.md, STYLE_GUIDE.md

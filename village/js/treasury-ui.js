@@ -10,6 +10,8 @@ import {
   incomeTotals, billTotals, accountTotals, annualAmount, importTrackerFile, billsCSV, incomeCSV, accountsCSV,
   FREQUENCIES, ACCOUNT_TYPES, niceDate, todayISO, toNumber,
 } from './household.js';
+import { sheetSettings, sheetReady, sheetStatus, newKey, testSheet, sendToSheet, pullFromSheet, bridgeScript } from './sheets.js';
+import { touchMeta } from './store.js';
 
 const $ = (s) => document.querySelector(s);
 function h(tag, attrs = {}, ...kids) {
@@ -221,6 +223,41 @@ export function renderTreasury(force = false) {
     h('h3', {}, `Cash · ${money(at.cash)}`), ...accounts().filter(a => !['Credit Card', 'Loan'].includes(a.type)).map(acctRow),
     h('h3', {}, `Debts · ${money(at.debt)}`), ...accounts().filter(a => ['Credit Card', 'Loan'].includes(a.type)).sort((x, y) => Math.abs(y.balance || 0) - Math.abs(x.balance || 0)).map(acctRow),
     editing === 'new:accounts' ? editor('accounts', { type: 'Checking', asOf: todayISO() }) : h('button', { class: 'btn btn-ghost', onclick: () => { editing = 'new:accounts'; rerender(); } }, '+ Add an account')));
+
+  body.append(sheetSection());
+}
+
+// ── Google Sheet link ────────────────────────────────────────
+function sheetSection() {
+  const st = sheetSettings();
+  const run = (fn, ok) => async () => { try { const r = await fn(); if (ok) toastFn(ok(r)); } catch (e) { toastFn(e.message); sheetStatus.text = e.message; sheetStatus.ok = false; } rerender(); };
+  const url = h('input', { type: 'url', placeholder: 'https://script.google.com/macros/s/…/exec', value: st.url || '', 'aria-label': 'Web app URL' });
+  url.addEventListener('change', () => { st.url = url.value.trim(); touchMeta(); toastFn(sheetReady() ? 'Link saved. Tap Test connection.' : 'That doesn\'t look like a Web app URL.'); url.blur(); rerender(); });
+  const auto = h('input', { type: 'checkbox', checked: st.auto !== false });
+  auto.addEventListener('change', () => { st.auto = auto.checked; touchMeta(); });
+  const tick = h('input', { type: 'checkbox', checked: st.tickPaid !== false });
+  tick.addEventListener('change', () => { st.tickPaid = tick.checked; touchMeta(); });
+  return section('sheet', `🔗 Google Sheet ${sheetReady() ? '· connected' : '· not connected'}`,
+    h('p', { class: 'note' }, 'Keeps your Google Sheet up to date. The kingdom writes its own tabs (Kingdom – Bills, Spending, Accounts, Income) and ticks a “Paid <month>” column in your Recurring Bills tab. Your other cells and formulas are never changed.'),
+    sheetReady() ? null : h('ol', { class: 'steps' },
+      h('li', {}, h('button', { class: 'btn', onclick: run(async () => { await navigator.clipboard.writeText(await bridgeScript()); }, () => 'Script copied, with your key filled in.') }, '📋 Copy the bridge script')),
+      h('li', {}, 'Open your tracker sheet → Extensions → Apps Script. Delete what\'s there, paste, and click 💾 Save.'),
+      h('li', {}, 'Click Deploy → New deployment → ⚙ Select type → Web app. Set “Execute as: Me” and “Who has access: Anyone”. Click Deploy and allow access (if Google warns the app isn\'t verified: Advanced → Go to project).'),
+      h('li', {}, 'Copy the Web app URL and paste it below.')),
+    h('label', {}, 'Web app URL', url),
+    h('label', { class: 'check' }, auto, 'Send changes to the sheet automatically'),
+    h('label', { class: 'check' }, tick, 'Tick the “Paid” column in my Recurring Bills tab'),
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'btn btn-ghost', disabled: !sheetReady(), onclick: run(testSheet, r => `Connected to “${r.sheet}”.`) }, 'Test connection'),
+      h('button', { class: 'btn', disabled: !sheetReady(), onclick: run(() => sendToSheet({ force: true }), () => 'Sheet updated.') }, '⬆ Send now'),
+      h('button', { class: 'btn btn-ghost', disabled: !sheetReady(), onclick: run(() => { if (!confirm('Update the Treasury from your sheet? Bills, accounts and income in the sheet will overwrite the same items here (nothing is deleted).')) throw new Error('Cancelled.'); return pullFromSheet(); }, c => `Pulled ${c.bills} bills from your sheet.`) }, '⬇ Pull from sheet')),
+    sheetStatus.text ? h('p', { class: `note ${sheetStatus.ok === false ? 'warn-text' : ''}` }, sheetStatus.text) : null,
+    h('details', {}, h('summary', { class: 'note' }, 'Key & advanced'),
+      h('p', { class: 'note' }, 'Your bridge key (it\'s inside the copied script; it stops anyone else using your sheet link):'),
+      h('code', { class: 'keybox' }, st.key),
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn btn-ghost', onclick: run(async () => { await navigator.clipboard.writeText(await bridgeScript()); }, () => 'Script copied.') }, 'Copy script again'),
+        h('button', { class: 'btn btn-danger', onclick: () => { if (confirm('Make a new key? You will need to paste the script into your sheet again and redeploy.')) { st.key = newKey(); touchMeta(); rerender(); } } }, 'New key'))));
 }
 
 // ── Download / import ────────────────────────────────────────
@@ -258,5 +295,6 @@ export function initTreasury(toast) {
     e.target.value = '';
   });
   onChange(() => { if ($('#panel-treasury')?.classList.contains('active')) renderTreasury(); });
+  sheetStatus.listeners.add(() => { if ($('#panel-treasury')?.classList.contains('active')) renderTreasury(); });
   renderTreasury();
 }
