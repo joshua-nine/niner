@@ -6,7 +6,7 @@ import {
   liveTasks, totalUsage,
 } from './store.js';
 import { sync, onSyncChange, signIn, signUp, signOutSync, resetPassword, friendlyAuthError } from './sync.js';
-import { chat, townhallTurn, hasKey } from './brain.js';
+import { chat, townhallTurn, hasKey, routeDirector } from './brain.js';
 import { say, startMeeting, endMeeting, inMeeting, initAgents, sims } from './agents.js';
 
 const $ = (s) => document.querySelector(s);
@@ -93,8 +93,10 @@ async function sendChat(e) {
 function fillOwnerSelects() {
   const owners = allPeople().filter(p => p.id !== 'mayor');
   const sel = $('#task-owner'), filt = $('#task-filter-owner');
-  const keep = filt.value;
-  sel.replaceChildren(...owners.map(p => h('option', { value: p.id }, `${p.name} (${p.role})`)));
+  const keep = filt.value, keepOwner = sel.value || 'auto';
+  sel.replaceChildren(h('option', { value: 'auto' }, '👑 Let the Queen assign it'),
+    ...owners.filter(p => p.id !== 'chief').map(p => h('option', { value: p.id }, `${p.name} (${p.role})`)));
+  sel.value = [...sel.options].some(o => o.value === keepOwner) ? keepOwner : 'auto';
   filt.replaceChildren(h('option', { value: '' }, 'Everyone'), ...owners.map(p => h('option', { value: p.id }, p.name)));
   filt.value = keep;
 }
@@ -350,7 +352,15 @@ export function initUI() {
   $('#task-form').addEventListener('submit', e => {
     e.preventDefault();
     const title = $('#task-title').value.trim(); if (!title) return;
-    addTask({ title, owner: $('#task-owner').value, by: 'mayor' });
+    const chosen = $('#task-owner').value;
+    if (chosen === 'auto' || chosen === 'chief') {
+      const to = routeDirector(title);
+      addTask({ title, owner: to.id, notes: `Assigned by ${agentById('chief')?.name || 'the Queen'}.`, by: 'chief' });
+      say('chief', `${to.name}, this one is yours: “${title}”.`, 5);
+      toast(`The Queen gave it to ${to.name}.`);
+    } else {
+      addTask({ title, owner: chosen, by: 'mayor' });
+    }
     $('#task-title').value = '';
   });
   $('#task-filter-owner').addEventListener('change', renderTasks);

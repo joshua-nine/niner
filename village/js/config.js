@@ -87,7 +87,7 @@ export const DEFAULT_AGENTS = [
     id: 'inbox', name: 'Iris', kind: 'director', look: 'wizard', house: 'inbox',
     role: 'Court Wizard of Messages',
     shirt: '#3a5bd9', hat: '#2b44a8', hair: '#d8d8e0', skin: 4,
-    keywords: ['email', 'inbox', 'reply', 'message', 'gmail', 'write to', 'respond', 'newsletter', 'letter'],
+    keywords: ['email', 'inbox', 'reply', 'message', 'gmail', 'write to', 'respond', 'newsletter', 'letter', 'mail', 'contact'],
     tools: ['gmail-draft', 'todo'],
     instructions:
       'You keep the Owl Post: the King\'s inbox. Triage, summarise, and draft replies. Every outgoing email is a request_approval of kind "email" with to/subject/body filled in.',
@@ -97,7 +97,7 @@ export const DEFAULT_AGENTS = [
     id: 'calendar', name: 'Cal', kind: 'director', look: 'wizard', house: 'calendar',
     role: 'Wizard of Time & Calendar',
     shirt: '#138a87', hat: '#0e6866', hair: '#9a9a9a', skin: 2,
-    keywords: ['meeting', 'calendar', 'schedule', 'appointment', 'call', 'book', 'remind', 'tomorrow', 'week'],
+    keywords: ['meeting', 'calendar', 'schedule', 'appointment', 'call', 'book', 'remind', 'tomorrow', 'week', 'event', 'deadline', 'birthday'],
     tools: ['calendar-draft', 'todo'],
     instructions:
       'You guard the King\'s hours from the Time Tower. Plan the day, find slots, and prepare calendar events. Every event or invite is a request_approval of kind "calendar" with when and duration_minutes.',
@@ -107,7 +107,7 @@ export const DEFAULT_AGENTS = [
     id: 'money', name: 'Penny', kind: 'director', look: 'dragon', house: 'money',
     role: 'Treasury Dragon',
     shirt: '#2e933c', belly: '#e9d58a', hair: '#1e6b2a', skin: 0,
-    keywords: ['money', 'budget', 'pay', 'bill', 'buy', 'purchase', 'invoice', 'subscription', '$', 'cost', 'price', 'gold'],
+    keywords: ['money', 'budget', 'pay', 'bill', 'buy', 'purchase', 'invoice', 'subscription', '$', 'cost', 'price', 'gold', 'financ', 'expense', 'spending', 'saving', 'debt', 'tax', 'bank', 'income', 'salary', 'rent', 'loan', 'invest'],
     tools: ['todo'],
     instructions:
       'You are the dragon who guards the royal treasury from the mountain hoard. You track bills, budgets and subscriptions and you hate waste. You may research and recommend, but every purchase or payment is a request_approval of kind "spend" with amount filled in.',
@@ -117,7 +117,7 @@ export const DEFAULT_AGENTS = [
     id: 'content', name: 'Princess Echo', kind: 'director', look: 'princess', house: 'content',
     role: 'Royal Herald (Content & Social)',
     shirt: '#e05a9a', hair: '#e8c15a', skin: 1,
-    keywords: ['post', 'tweet', 'social', 'linkedin', 'instagram', 'content', 'video', 'blog', 'caption', 'youtube', 'announce'],
+    keywords: ['post', 'tweet', 'social', 'linkedin', 'instagram', 'content', 'video', 'blog', 'caption', 'youtube', 'announce', 'facebook', 'tiktok', 'patreon', 'newsletter'],
     tools: ['todo'],
     instructions:
       'You are the Royal Herald: you plan and draft the kingdom\'s proclamations (content and social posts). Every public post is a request_approval of kind "post" with platform and body. Never post yourself.',
@@ -127,7 +127,7 @@ export const DEFAULT_AGENTS = [
     id: 'health', name: 'Duchess Sage', kind: 'director', look: 'duchess', house: 'health',
     role: 'Duchess of the Hearth (Health & Home)',
     shirt: '#d9822b', hair: '#4a2c1a', skin: 3,
-    keywords: ['gym', 'workout', 'health', 'doctor', 'sleep', 'food', 'meal', 'grocery', 'home', 'chores', 'family'],
+    keywords: ['gym', 'workout', 'health', 'doctor', 'sleep', 'food', 'meal', 'grocery', 'home', 'chores', 'family', 'exercise', 'diet', 'clean', 'laundry', 'house', 'kids', 'pets', 'dog', 'cats'],
     tools: ['todo'],
     instructions:
       'You look after the King\'s health, household and family logistics: training, meals, provisions, chores, appointments. Purchases need spend approval; appointments go via the Wizard of Time.',
@@ -137,7 +137,7 @@ export const DEFAULT_AGENTS = [
     id: 'projects', name: 'Prince Dex', kind: 'director', look: 'prince', house: 'projects',
     role: 'Prince of Quests (Projects & Learning)',
     shirt: '#2f4f8f', cape: '#1d3461', hair: '#8b5a2b', skin: 4,
-    keywords: ['project', 'code', 'learn', 'study', 'course', 'research', 'idea', 'build', 'website', 'app', 'class', 'quest'],
+    keywords: ['project', 'code', 'learn', 'study', 'course', 'research', 'idea', 'build', 'website', 'app', 'class', 'quest', 'school', 'homework', 'gcu', 'd&d', 'dnd', 'campaign', 'game'],
     tools: ['todo'],
     instructions:
       'You lead the King\'s quests: side projects and learning. Break big goals into weekly steps, research, and keep notes. Anything external still needs approval.',

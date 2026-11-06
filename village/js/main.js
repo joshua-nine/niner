@@ -2,7 +2,7 @@
 import { renderStatic, renderDynamic, size, buildingAt } from './world.js';
 import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, say, setIcon } from './agents.js';
 import { state, log, onChange } from './store.js';
-import { workOnTask, superviseNext, nextForReview, queenVisitLine } from './brain.js';
+import { workOnTask, superviseNext, nextForReview, queenVisitLine, queenDelegate } from './brain.js';
 import { initSync, sync } from './sync.js';
 import { initUI, ui, selectAgent } from './ui.js';
 import { drawWildDragon } from './sprites.js';
@@ -22,6 +22,7 @@ initAgents();
 hooks.onTaskWorked = (id, task) => workOnTask(id, task);
 hooks.canWork = () => sync.leader;          // only one of your devices runs the court
 hooks.visitLine = queenVisitLine;
+hooks.delegate = queenDelegate;            // the Queen assigns, she doesn't do the work
 onChange(() => initAgents());               // the court may change on another device
 initUI();
 window.__kingdomBooted = true;          // tells the start-up safety net all is well

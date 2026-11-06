@@ -11,7 +11,7 @@
 import { DEFAULT_AGENTS, MAYOR } from './config.js';
 
 const KEY = 'agent-village-v1';
-const VERSION = 3;   // 2 = the Kingdom, 3 = sync + the Queen's supervision
+const VERSION = 4;   // 2 = the Kingdom, 3 = sync + the Queen's supervision, 4 = better routing words
 const listeners = new Set();
 
 export const deviceId = (() => {
@@ -53,6 +53,13 @@ function migrate(saved, s) {
     const now = Date.now();
     for (const t of s.tasks) t.updated ||= t.created || now;
     for (const a of s.approvals) { a.updated ||= a.resolved || a.created || now; a.stage ||= 'king'; }
+  }
+  if (v < 4) {                                   // add new routing words, keep the King's own edits
+    for (const a of s.agents) {
+      const def = DEFAULT_AGENTS.find(d => d.id === a.id);
+      if (def) a.keywords = [...new Set([...(a.keywords || []), ...def.keywords])];
+    }
+    s.metaUpdated = Date.now();
   }
   s.version = VERSION;
 }
