@@ -16,7 +16,7 @@ const ROYAL = new Set(['queen', 'princess', 'prince', 'duchess']);
 
 export const sims = new Map();
 // canWork: only one of your devices does the work when you're signed in on several.
-export const hooks = { onTaskWorked: async () => {}, canWork: () => true, visitLine: () => '' };
+export const hooks = { onTaskWorked: async () => {}, canWork: () => true, visitLine: () => '', delegate: () => null };
 let meeting = null;           // { spots: Map<id, tile> }
 
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -103,6 +103,10 @@ function plan(s) {
 
   // Anyone with work (Chief, directors, interns) walks to their desk.
   const task = openTasksFor(p.id)[0];
+  if (task && p.kind === 'chief' && hooks.canWork()) {      // the Queen hands work out
+    const to = hooks.delegate(task);
+    if (to) { s.icon = '📜'; say(s.id, `${to.name}, this one is yours: “${task.title}”.`, 5); rest(s, 2, 4); return; }
+  }
   if (task && p.kind !== 'mayor') {
     goTo(s, homeSpot(p), () => {
       s.state = 'work'; s.task = task.id; s.icon = WORK_ICON[p.look] || '📜'; s.dir = 'up';

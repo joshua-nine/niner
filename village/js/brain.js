@@ -396,15 +396,33 @@ function detectKind(text) {
   for (const [k, words] of Object.entries(KIND_WORDS)) if (words.some(w => t.includes(w))) return k;
   return null;
 }
-function routeDirector(text) {
+export function routeDirector(text) {
   const t = text.toLowerCase();
   let best = null, score = 0;
   for (const a of state.agents.filter(a => a.kind === 'director')) {
-    const s = (a.keywords || []).reduce((n, k) => n + (t.includes(k) ? 1 : 0), 0);
+    // keywords match at the start of a word: "rent" ≠ "parent", "financ" = "financial"
+    const s = (a.keywords || []).reduce((n, k) => n + (new RegExp(`(^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(t) ? 1 : 0), 0);
     if (s > score) { score = s; best = a; }
   }
   return best || state.agents.find(a => a.id === 'projects') || state.agents.find(a => a.kind === 'director');
 }
+// The Queen never does court work herself: anything that lands on her list
+// she hands to the right courtier (or to whoever a note names: "… for Iris").
+export function queenDelegate(task) {
+  let target = null;
+  const named = (task.notes || '').match(/\bfor ([A-Z][\w ]+?)(?::|$)/);
+  if (named) target = state.agents.find(a => a.kind === 'director' && a.name.toLowerCase() === named[1].trim().toLowerCase());
+  if (!target) target = routeDirector(`${task.title} ${task.notes || ''}`);
+  if (!target) return null;
+  const queen = agentById('chief')?.name || 'The Queen';
+  updateTask(task.id, {
+    owner: target.id, status: 'todo', progress: 0,
+    notes: `${task.notes ? task.notes + '\n' : ''}Assigned by ${queen}.`,
+  });
+  log('chief', `Assigned “${task.title}” to ${target.name}, ${target.role}`, 'task');
+  return target;
+}
+
 const titleFrom = (text) => {
   const s = text.replace(/^(please |pls |kindly )?((can|could|would|will) you |please |pls |kindly )+/i, '').replace(/[?.!]+$/, '').trim();
   return (s.charAt(0).toUpperCase() + s.slice(1)).slice(0, 90);
