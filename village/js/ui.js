@@ -296,7 +296,7 @@ function renderFeed() {
 function renderTop() {
   const live = hasKey();
   const m = $('#mode');
-  m.textContent = live ? `● Claude · ${state.settings.model.replace('claude-', '')}` : '● Offline mode';
+  m.textContent = live ? `● Claude · ${state.settings.model.replace('claude-', '')}` : '● Free mode';
   m.className = `stat pill ${live ? 'live' : 'offline'}`;
   const u = totalUsage();
   $('#spend').textContent = `$${u.cost.toFixed(2)} · ${u.calls} calls`;
@@ -359,7 +359,7 @@ export function initUI() {
   $('#th-end').addEventListener('click', adjourn);
 
   $('#set-name').addEventListener('change', e => { state.mayorName = e.target.value.trim() || 'The King'; touchMeta(); renderAll(); });
-  $('#set-key').addEventListener('change', e => { state.settings.apiKey = e.target.value.trim(); save(); toast(state.settings.apiKey ? 'Key saved. The court now thinks with Claude.' : 'Key removed. Offline mode.'); });
+  $('#set-key').addEventListener('change', e => { state.settings.apiKey = e.target.value.trim(); save(); toast(state.settings.apiKey ? 'Key saved. The court now thinks with Claude.' : 'Key removed. Back to free mode.'); });
   $('#set-model').addEventListener('change', e => { state.settings.model = e.target.value; touchMeta(); });
   $('#set-effort').addEventListener('change', e => { state.settings.effort = e.target.value; touchMeta(); });
   $('#set-autowork').addEventListener('change', e => { state.settings.autoWork = e.target.checked; touchMeta(); });

@@ -406,28 +406,87 @@ function routeDirector(text) {
   return best || state.agents.find(a => a.id === 'projects') || state.agents.find(a => a.kind === 'director');
 }
 const titleFrom = (text) => {
-  const s = text.replace(/^(please|can you|could you|pls)\s+/i, '').replace(/[?.!]+$/, '').trim();
+  const s = text.replace(/^(please |pls |kindly )?((can|could|would|will) you |please |pls |kindly )+/i, '').replace(/[?.!]+$/, '').trim();
   return (s.charAt(0).toUpperCase() + s.slice(1)).slice(0, 90);
 };
 
+// What each member of the court can do, with example commands (free mode help).
+const DOMAIN_HELP = {
+  inbox: ['draft replies and emails (you seal them before anything is sent)', 'Reply to Sam and say Friday works'],
+  calendar: ['plan your days and prepare calendar events', 'Schedule a dentist appointment next week'],
+  money: ['track bills, budgets and purchases (no coin leaves the hoard without your seal)', 'Budget $200 for groceries this month'],
+  content: ['draft posts and announcements', 'Write a LinkedIn post about my new project'],
+  health: ['look after workouts, meals, groceries and chores', 'Plan three workouts for this week'],
+  projects: ['break big goals and learning into steps', 'Help me learn JavaScript this month'],
+};
+
+function courtGuide() {
+  const lines = state.agents.filter(a => a.kind === 'director').map(a => `• ${a.name} (${a.role.replace(/\s*\(.*\)$/, '')}): ${DOMAIN_HELP[a.id]?.[0] || a.role}`);
+  return 'Here is how your court can serve you, Your Majesty:\n\n' +
+    '• Tell me anything you need, in plain words, and I hand it to the right courtier. They walk home, do the work, and I review it before it counts as done.\n' +
+    '• Anything that would leave the kingdom (an email, a post, a purchase, a calendar event) comes to you as a petition in Approvals. Nothing happens without your seal.\n' +
+    '• I\'m also here for you: tap 💜 Pep talk or 😮‍💨 Rough day any time.\n\n' +
+    lines.join('\n') +
+    '\n\nTry: “Reply to Sam and say Friday works”, “Schedule a dentist appointment next week”, or “How\'s the court?”.';
+}
+
+function courtierHelp(me) {
+  const h = DOMAIN_HELP[me.id];
+  if (!h) return `I'm ${me.name}, ${me.role}. I help my master with small errands. Give me a task, or ask the Queen.`;
+  return `I'm ${me.name}, ${me.role}. I can ${h[0]}. Just tell me what you need, for example: “${h[1]}”. When something needs to leave the kingdom, it comes to you to seal first.`;
+}
+
+// Requests (make a task) vs questions and chat (just answer).
+const REQUEST_START = /^(please |pls |kindly )?(can|could|would|will) you\b|^(please|pls|kindly)\b|^(remind|schedule|book|email|reply|write|draft|send|post|buy|order|pay|plan|make|create|add|find|research|look up|check|call|text|message|prepare|set up|organi[sz]e|help me|i need|i want|we need|let'?s|get|clean|cancel|move|update|track|budget|learn|study)\b/;
+const QUESTION_START = /^(what|who|why|how|when|where|which|is|are|am|do|does|did|was|were|have|has|should|shall|may)\b/;
+
 function offlineChat(agentId, text) {
   const me = agentById(agentId);
-  const t = text.toLowerCase().trim();
+  const t = text.toLowerCase().trim().replace(/[!.\s]+$/, '');
+  const chief = me.kind === 'chief';
+  const open = () => liveTasks().filter(x => ['todo', 'doing', 'review', 'needs_approval'].includes(x.status));
+
   if (CRISIS.test(t)) return crisisReply();             // any courtier: care first, never a task
-  if (me.kind === 'chief' && FEELINGS.test(t)) return queenComfort(t);
-  if (me.kind === 'chief' && /(pep talk|encourag|motivat|cheer me|proud)/.test(t)) return queenPepTalk();
-  if (/^(hi|hey|hello|yo|sup|good (morning|afternoon|evening))\b/.test(t) && t.length < 25) {
-    const n = openTasksFor(agentId).length;
-    return `Greetings, Your Majesty! ${me.name}, ${me.role}, at your service. I have ${n} open task${n === 1 ? '' : 's'}. How may I serve?`;
+  if (chief && FEELINGS.test(t)) return queenComfort(t);
+  if (chief && /(pep talk|encourag|motivat|cheer me|proud of me)/.test(t)) return queenPepTalk();
+
+  // Small talk
+  if (/^(hi|hey|hello|yo|sup|greetings|hail|good (morning|afternoon|evening|day))\b/.test(t) && t.length < 30) {
+    const n = chief ? open().length : openTasksFor(agentId).length;
+    return `Greetings, Your Majesty! ${chief ? me.name : `${me.name}, ${me.role},`} at your service. ${n ? `There ${n === 1 ? 'is' : 'are'} ${n} open task${n === 1 ? '' : 's'}.` : 'All is quiet right now.'} How may I serve?`;
   }
-  if (/(status|what are you|update|how'?s it going|list)/.test(t)) {
-    const open = me.kind === 'chief'
-      ? liveTasks().filter(x => ['todo', 'doing', 'review', 'needs_approval'].includes(x.status))
-      : openTasksFor(agentId);
-    if (!open.length) return 'All is quiet in the realm: nothing open right now.';
-    return 'The state of the realm, Your Majesty:\n' + open.slice(0, 8).map(x => `• ${agentById(x.owner)?.name}: ${x.title} (${x.status})`).join('\n');
+  if (/^(thanks|thank you|thx|ty|cheers|much appreciated|great job|well done|good job)\b/.test(t))
+    return chief ? 'It is my joy to serve, Your Majesty. You\'re doing wonderfully.' : `My pleasure, Your Majesty. ${me.name} is always at your service.`;
+  if (/how are you|how('?s| is) your day|how do you (do|feel)/.test(t))
+    return chief ? 'I am well, Your Majesty, and the court is in good order. But more importantly: how are you today?' : `Splendid, Your Majesty! Ready for the next quest.`;
+  if (/^(good ?night|bye|goodbye|see you|farewell)\b/.test(t))
+    return chief ? 'Rest well, Your Majesty. The court will keep watch.' : 'Farewell, Your Majesty!';
+
+  // Help and introductions
+  if (/what can (you|u|the court|everyone) do|what do (you|u) do|^help\b|how (does|do) (this|it|the (app|kingdom|court)) work|how (do|can) i use|what (is|are) (this|the) (app|kingdom|court) for|what should i (say|ask|do)/.test(t))
+    return chief ? courtGuide() : courtierHelp(me);
+  if (/who are you|what('?s| is) your (name|role|job)|tell me about (yourself|you)/.test(t))
+    return chief ? `I am ${me.name}: your Queen, your moral support, and the overseer of the court. Every request comes to me first, I send it to the right courtier, and I check their work before it reaches you. Ask me “what can you do?” for the full tour.` : courtierHelp(me);
+  if (/who('?s| is)? (in|on) (the|my) (court|team)|who works for me|list (the )?(court|team)|who('?s| is) who/.test(t))
+    return 'Your court, Your Majesty:\n' + state.agents.map(a => `• ${a.name}: ${a.role}${a.intern ? ` (helper: ${a.intern.name})` : ''}`).join('\n');
+
+  // Status
+  if (/status|how'?s (it going|the court|everything|work)|what('?s| is) (open|left|pending|on (my|the) list)|what are (you|they|we) (doing|working on)|update me|my (tasks|list)|^list\b/.test(t)) {
+    const list = chief ? open() : openTasksFor(agentId);
+    if (!list.length) return 'All is quiet in the realm: nothing open right now.';
+    const label = { todo: 'to do', doing: 'in progress', review: 'with the Queen for review', needs_approval: 'awaiting your seal' };
+    return 'The state of the realm, Your Majesty:\n' + list.slice(0, 8).map(x => `• ${agentById(x.owner)?.name}: ${x.title} (${label[x.status] || x.status})`).join('\n');
   }
-  if (me.kind === 'chief') {
+
+  // A genuine question we can't answer well in free mode: answer honestly, don't make a task.
+  const looksLikeQuestion = (t.endsWith('?') || QUESTION_START.test(t)) && !REQUEST_START.test(t);
+  if (looksLikeQuestion)
+    return `A fine question, Your Majesty, but in free mode I can only handle requests and reminders, not open questions. ` +
+      `Give me something to do (for example “Remind me to call Mum on Sunday”), or ask your Claude app for a full answer. ` +
+      `If you'd like it on someone's list anyway, start with “please”.`;
+
+  // Otherwise it's a request: make a task.
+  if (chief) {
     const d = routeDirector(text);
     const task = addTask({ title: titleFrom(text), owner: d.id, notes: `Requested by ${state.mayorName}: "${text}"`, by: agentId });
     const kind = detectKind(text);
