@@ -179,3 +179,7 @@ label.inline input { width: 120px; }
 .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .edit-grid label:first-child, .edit-grid label:last-child { grid-column: 1 / -1; }
 #treasury-what { flex: 1; min-width: 0; }
+
+.steps { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.keybox { display: block; font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; word-break: break-all; }
+.tsec > button.card, .tsec > .card { width: calc(100% - 24px); box-sizing: border-box; }

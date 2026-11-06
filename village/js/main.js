@@ -4,6 +4,7 @@ import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, sa
 import { state, log, onChange } from './store.js';
 import { workOnTask, superviseNext, nextForReview, queenVisitLine, queenDelegate } from './brain.js';
 import { initSync, sync } from './sync.js';
+import { initSheetSync } from './sheets.js';
 import { upcomingBills, niceDate } from './household.js';
 import { money } from './treasury.js';
 import { initUI, ui, selectAgent } from './ui.js';
@@ -30,6 +31,7 @@ initUI();
 window.__kingdomBooted = true;          // tells the start-up safety net all is well
 ui.onSelect = () => {};
 initSync();
+initSheetSync(() => sync.leader);       // keep the King's Google Sheet up to date
 
 // ── Penny's daily bill reminder ─────────────────────────────
 function billReminder() {
