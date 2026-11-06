@@ -46,6 +46,7 @@
         <button class="tab" data-tab="tasks">To-Do</button>
         <button class="tab" data-tab="approvals">Approvals <span id="tab-badge" class="badge hidden">0</span></button>
         <button class="tab" data-tab="townhall">Royal Court</button>
+        <button class="tab" data-tab="treasury">💰 Treasury</button>
         <button class="tab" data-tab="village">Kingdom</button>
       </nav>
 
@@ -100,6 +101,16 @@
         </form>
         <button class="btn btn-ghost hidden" id="th-end">Adjourn the court</button>
         <div id="th-log" class="chat-log tall"></div>
+      </div>
+
+      <!-- The Royal Treasury: money tracker (synced, editable by you and Penny) -->
+      <div class="panel" id="panel-treasury">
+        <p class="note">Your money tracker. Edit it here, or tell Penny the Treasury Dragon what you spend and earn; she records it live on all your devices. Recording is bookkeeping only: nothing here spends money.</p>
+        <div class="btn-row">
+          <button class="btn" id="treasury-download" type="button">⬇ Download spreadsheet</button>
+          <label class="btn btn-ghost file-btn">Import CSV<input type="file" id="treasury-import" accept=".csv,text/csv" hidden></label>
+        </div>
+        <div id="treasury-body" class="treasury"></div>
       </div>
 
       <!-- Steps 1–3 + settings -->

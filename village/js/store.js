@@ -9,6 +9,7 @@
 //  • API usage is counted per device and summed;
 //  • the API key never leaves this device.
 import { DEFAULT_AGENTS, MAYOR } from './config.js';
+import { mergeTreasury } from './treasury.js';   // used only when merging (call time)
 
 const KEY = 'agent-village-v1';
 const VERSION = 4;   // 2 = the Kingdom, 3 = sync + the Queen's supervision, 4 = better routing words
@@ -33,6 +34,7 @@ function fresh() {
     townhall: [],       // [{ from, text, ts }]
     settings: { apiKey: '', model: 'claude-opus-5-5', effort: 'low', autoWork: true },
     usageByDevice: {},  // deviceId -> { input, output, cost, calls }
+    treasury: null,     // the Royal Treasury (treasury.js creates it on first use)
     metaUpdated: 0,     // when name / court / settings last changed
     version: VERSION,
   };
@@ -226,6 +228,7 @@ export function mergeStates(local, remote) {
     out.settings = { ...local.settings, ...remote.settings, apiKey: local.settings.apiKey };
     out.metaUpdated = remote.metaUpdated;
   }
+  out.treasury = mergeTreasury(local.treasury, remote.treasury);
   out.version = Math.max(local.version || 0, remote.version || 0);
   return out;
 }
