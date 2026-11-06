@@ -105,10 +105,17 @@
 
       <!-- The Royal Treasury: money tracker (synced, editable by you and Penny) -->
       <div class="panel" id="panel-treasury">
-        <p class="note">Your money tracker. Edit it here, or tell Penny the Treasury Dragon what you spend and earn; she records it live on all your devices. Recording is bookkeeping only: nothing here spends money.</p>
+        <p class="note">Your household money tracker: bills, spending, income, accounts and debts. Edit it here, or tell Penny the Treasury Dragon; changes appear live on all your devices. Bookkeeping only: nothing here pays or spends money.</p>
         <div class="btn-row">
-          <button class="btn" id="treasury-download" type="button">⬇ Download spreadsheet</button>
-          <label class="btn btn-ghost file-btn">Import CSV<input type="file" id="treasury-import" accept=".csv,text/csv" hidden></label>
+          <select id="treasury-what" aria-label="What to download">
+            <option value="everything">Everything</option>
+            <option value="bills">Bills</option>
+            <option value="entries">Spending</option>
+            <option value="income">Income</option>
+            <option value="accounts">Accounts &amp; debts</option>
+          </select>
+          <button class="btn" id="treasury-download" type="button">⬇ Download</button>
+          <label class="btn btn-ghost file-btn">Import<input type="file" id="treasury-import" accept=".json,application/json,.csv,text/csv" hidden></label>
         </div>
         <div id="treasury-body" class="treasury"></div>
       </div>

@@ -162,3 +162,20 @@ label.inline input { width: 120px; }
 .card.entry { text-align: left; color: var(--text); cursor: pointer; font: inherit; width: 100%; }
 .card.entry:hover { border-color: var(--neon); }
 .card.entry.editing { border-color: var(--gold); cursor: default; }
+
+/* Treasury sections, bills, editors */
+.tsec { border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.015); }
+.tsec > summary { cursor: pointer; padding: 10px 12px; font-family: var(--head); font-size: 12px; letter-spacing: .05em; color: var(--blue); list-style: none; }
+.tsec > summary::-webkit-details-marker { display: none; }
+.tsec > summary::before { content: '▸ '; color: var(--dim); }
+.tsec[open] > summary::before { content: '▾ '; }
+.tsec > :not(summary) { margin: 0 12px 10px; }
+.card.bill.paid { opacity: .72; }
+.card.bill.overdue { border-color: var(--red); }
+.card.bill.soon { border-color: var(--gold); }
+.pill-s { font-family: var(--mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #2a2f4a; white-space: nowrap; }
+.pill-s.paid { color: var(--neon); } .pill-s.overdue { color: var(--red); } .pill-s.soon { color: var(--gold); } .pill-s.nodate, .pill-s.upcoming { color: var(--dim); }
+.linkish { background: none; border: 0; padding: 0; color: var(--text); text-align: left; cursor: pointer; font: inherit; font-weight: 600; text-decoration: underline dotted var(--dim); }
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.edit-grid label:first-child, .edit-grid label:last-child { grid-column: 1 / -1; }
+#treasury-what { flex: 1; min-width: 0; }

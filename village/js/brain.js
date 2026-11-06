@@ -11,6 +11,7 @@ import {
   addUsage, liveTasks, updateApproval,
 } from './store.js';
 import { addEntry, setBudget, parseMoney, parseBudget, treasuryBrief, setUpTreasury, money, treasury } from './treasury.js';
+import { bills, matchBill, markPaid, isPaid, billsBrief, debtBrief, cashFlowBrief, upcomingBills, niceDate } from './household.js';
 
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.1.0/+esm';
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-fable-5-1']);
@@ -83,6 +84,15 @@ function tools() {
       },
     },
     {
+      name: 'mark_bill_paid',
+      description: 'Mark one of the King\'s recurring bills as paid for this month (records the payment in the Treasury). Bookkeeping only: it does not pay anything. Only use it when the King says the bill has been paid.',
+      input_schema: {
+        type: 'object',
+        properties: { bill: { type: 'string', description: 'Bill name as listed, e.g. "Electric bill"' }, amount: { type: 'number', description: 'Amount paid, if different from the usual amount' } },
+        required: ['bill'],
+      },
+    },
+    {
       name: 'set_budget',
       description: 'Set the monthly budget for a Treasury category (0 removes it).',
       input_schema: {
@@ -130,10 +140,17 @@ function runTool(agentId, name, input) {
     const a = requestApproval({ from: agentId, kind, summary, details, taskId: task ? task.id : null });
     return { ok: true, approval_id: a.id, status: 'pending: the King will decide. Do not say it was sent/posted/paid.' };
   }
-  if (name === 'record_money' || name === 'set_budget') {
+  if (name === 'record_money' || name === 'set_budget' || name === 'mark_bill_paid') {
     if (!['money', 'chief'].includes(agentId)) return { error: 'Only the Treasury Dragon (or the Queen) keeps the books. Ask Penny.' };
     try {
       if (name === 'set_budget') { setBudget(input.category, input.amount); return { ok: true, budgets: treasury().budgets }; }
+      if (name === 'mark_bill_paid') {
+        const b = bills().find(x => x.name.toLowerCase() === String(input.bill).toLowerCase()) || matchBill(input.bill);
+        if (!b) return { error: `No bill matches "${input.bill}". Bills: ${bills().map(x => x.name).join(', ')}` };
+        if (isPaid(b)) return { ok: true, note: `${b.name} was already marked paid this month.` };
+        markPaid(b.id, { by: 'money', amount: input.amount });
+        return { ok: true, marked: b.name };
+      }
       const e = addEntry({ desc: input.desc, amount: input.amount, category: input.category, date: input.date, by: 'money' });
       return { ok: true, entry_id: e.id, summary: treasuryBrief() };
     } catch (err) { return { error: err.message }; }
@@ -162,7 +179,7 @@ function systemPrompt(agentId, mode) {
       .map(t => `- [${t.id}] ${agentById(t.owner)?.name}: ${t.title} — ${t.status}`).join('\n') || '- (none)')
     : '';
   const books = ['money', 'chief'].includes(agentId)
-    ? `\n\nTHE ROYAL TREASURY (the King's money tracker, in the 💰 Treasury tab): ${treasuryBrief()} Budgets: ${Object.entries(treasury().budgets).filter(([, v]) => v > 0).map(([c, v]) => `${c} ${money(v)}`).join(', ') || 'none set yet'}. Use record_money when the King tells you about money already spent or received.`
+    ? `\n\nTHE ROYAL TREASURY (the King's money tracker, in the 💰 Treasury tab): ${treasuryBrief()} Budgets: ${Object.entries(treasury().budgets).filter(([, v]) => v > 0).map(([c, v]) => `${c} ${money(v)}`).join(', ') || 'none set yet'}. Use record_money when the King tells you about money already spent or received.${billsBrief(10) ? ' ' + billsBrief(10) : ''}${debtBrief() ? ' ' + debtBrief() : ''}${cashFlowBrief() ? ' ' + cashFlowBrief() : ''} Use mark_bill_paid when the King says a bill is paid.`
     : '';
   const modeText = {
     chat: 'The King is speaking to you directly.',
@@ -412,6 +429,11 @@ function queenPepTalk() {
 
 // Short lines the Queen says on her visits to the King's Keep.
 export function queenVisitLine() {
+  const soon = upcomingBills(2);
+  if (soon.length && Math.random() < 0.6) {
+    const x = soon[0];
+    return `A gentle reminder, my King: ${x.bill.name} (${money(x.bill.amount || 0)}) is ${x.overdue ? 'overdue since' : 'due'} ${niceDate(x.due)}.${soon.length > 1 ? ` ${soon.length - 1} more soon. Penny has the list.` : ''}`;
+  }
   const done = doneToday();
   const lines = done
     ? [`${done} task${done > 1 ? 's' : ''} done today. I'm proud of you!`, `The court is thriving, Your Majesty: ${done} done today.`, 'Remember to take a break. You\'ve earned it.']
@@ -501,6 +523,25 @@ function offlineChat(agentId, text) {
 
   if (CRISIS.test(t)) return crisisReply();             // any courtier: care first, never a task
   if (chief && FEELINGS.test(t)) return queenComfort(t);
+
+  // Bills: "paid the electric bill", "what bills are due?", "how much do I owe?", "cash flow"
+  if (bills().length) {
+    if (/\b(paid|pay(ed)?|mark(ed)?)\b/.test(t) && !/\b(got paid|paid me|remind|can you pay|please pay|pay for)\b/.test(t)) {
+      const b = matchBill(t);
+      if (b) {
+        if (isPaid(b)) return `${b.name} is already marked paid this month, Your Majesty.`;
+        const amt = (t.match(/\$\s?(\d[\d,]*(?:\.\d{1,2})?)/) || [])[1];
+        markPaid(b.id, { by: 'money', amount: amt ? Number(amt.replace(/,/g, '')) : undefined });
+        return `${me.id === 'money' ? 'Done' : 'Penny marked it'}: ${b.name} is paid for this month (${money(amt ? Number(amt.replace(/,/g, '')) : b.amount || 0)}), and it's recorded in Spending. ${billsBrief(7)}`;
+      }
+    }
+    if (/(what|which|any) (bills?|payments?)( are| is)? (due|coming|left|unpaid)|bills? (due|this week|coming up|left)|what('?s| is) due|upcoming bills|what do i (owe|pay) this week/.test(t))
+      return billsBrief(/month/.test(t) ? 31 : 7) + ' The full list is in the 💰 Treasury tab, with a Mark paid button on each.';
+    if (/how much (do|does) (i|we) owe|my debts?|total debt|credit card balances?|net worth|how much cash/.test(t))
+      return (debtBrief() || 'No accounts recorded yet.') + ' See Accounts & debts in the 💰 Treasury tab.';
+    if (/cash ?flow|left over|leftover|how much (is|do i have) left|can (i|we) afford/.test(t))
+      return cashFlowBrief() + ' Details are in the 💰 Treasury tab.';
+  }
 
   // The Treasury: "spent $12 on lunch", "got paid $2000", "budget $300 for groceries", "how much have I spent?"
   const budget = parseBudget(text);
