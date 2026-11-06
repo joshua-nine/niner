@@ -10,6 +10,7 @@ import {
   state, save, agentById, addTask, updateTask, requestApproval, log, openTasksFor,
   addUsage, liveTasks, updateApproval,
 } from './store.js';
+import { addEntry, setBudget, parseMoney, parseBudget, treasuryBrief, setUpTreasury, money, treasury } from './treasury.js';
 
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.1.0/+esm';
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-fable-5-1']);
@@ -68,6 +69,29 @@ function tools() {
       },
     },
     {
+      name: 'record_money',
+      description: 'Record money already spent or received in the Royal Treasury (the King\'s money tracker). Bookkeeping only: this never spends or moves money. Use a negative amount for spending and a positive amount for income.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          desc: { type: 'string', description: 'What it was, e.g. "Lunch at Joe\'s"' },
+          amount: { type: 'number', description: 'Negative = spent, positive = received' },
+          category: { type: 'string', description: 'One of: Income, Housing, Bills & utilities, Groceries, Eating out, Transport, Health, Shopping, Subscriptions, Fun, Savings, Other' },
+          date: { type: 'string', description: 'YYYY-MM-DD; defaults to today' },
+        },
+        required: ['desc', 'amount'],
+      },
+    },
+    {
+      name: 'set_budget',
+      description: 'Set the monthly budget for a Treasury category (0 removes it).',
+      input_schema: {
+        type: 'object',
+        properties: { category: { type: 'string' }, amount: { type: 'number' } },
+        required: ['category', 'amount'],
+      },
+    },
+    {
       name: 'complete_todo',
       description: 'Mark one of your tasks done and record the result (findings, plan, notes). Do not use this for work that still needs the King\'s approval.',
       input_schema: {
@@ -106,6 +130,14 @@ function runTool(agentId, name, input) {
     const a = requestApproval({ from: agentId, kind, summary, details, taskId: task ? task.id : null });
     return { ok: true, approval_id: a.id, status: 'pending: the King will decide. Do not say it was sent/posted/paid.' };
   }
+  if (name === 'record_money' || name === 'set_budget') {
+    if (!['money', 'chief'].includes(agentId)) return { error: 'Only the Treasury Dragon (or the Queen) keeps the books. Ask Penny.' };
+    try {
+      if (name === 'set_budget') { setBudget(input.category, input.amount); return { ok: true, budgets: treasury().budgets }; }
+      const e = addEntry({ desc: input.desc, amount: input.amount, category: input.category, date: input.date, by: 'money' });
+      return { ok: true, entry_id: e.id, summary: treasuryBrief() };
+    } catch (err) { return { error: err.message }; }
+  }
   if (name === 'complete_todo') {
     const t = state.tasks.find(x => x.id === input.task_id);
     if (!t) return { error: 'No such task.' };
@@ -129,6 +161,9 @@ function systemPrompt(agentId, mode) {
     ? '\nOpen tasks across the court:\n' + (liveTasks().filter(t => t.status !== 'done' && t.status !== 'declined').slice(0, 25)
       .map(t => `- [${t.id}] ${agentById(t.owner)?.name}: ${t.title} — ${t.status}`).join('\n') || '- (none)')
     : '';
+  const books = ['money', 'chief'].includes(agentId)
+    ? `\n\nTHE ROYAL TREASURY (the King's money tracker, in the 💰 Treasury tab): ${treasuryBrief()} Budgets: ${Object.entries(treasury().budgets).filter(([, v]) => v > 0).map(([c, v]) => `${c} ${money(v)}`).join(', ') || 'none set yet'}. Use record_money when the King tells you about money already spent or received.`
+    : '';
   const modeText = {
     chat: 'The King is speaking to you directly.',
     townhall: 'This is a Town Hall meeting with the whole team. Speak in turn, in at most 60 words, building on what others said. You may add tasks if something concrete comes up.',
@@ -140,7 +175,7 @@ function systemPrompt(agentId, mode) {
     `GROUND RULES (non-negotiable):\n${GROUND_RULES.map((r, i) => `${i + 1}. ${r}`).join('\n')}`,
     `YOUR INSTRUCTIONS:\n${me.instructions || `You are ${me.role}. Help your master with small, concrete errands.`}`,
     `THE TEAM:\n${roster}`,
-    `YOUR TO-DO LIST:\n${mine}${extra}`,
+    `YOUR TO-DO LIST:\n${mine}${extra}${books}`,
     `Today is ${new Date().toLocaleString()}. ${modeText}`,
     'If the King ever expresses real distress or thoughts of self-harm, respond with care first (never turn it into a task), and gently encourage reaching out to someone they trust or a crisis line (US: call or text 988; elsewhere: findahelpline.com).',
     'Write plain text (no markdown headings). Address the human as "Your Majesty" and keep a light medieval flavour, but be warm, brief and practical: real dates, real drafts, real next steps.',
@@ -466,6 +501,17 @@ function offlineChat(agentId, text) {
 
   if (CRISIS.test(t)) return crisisReply();             // any courtier: care first, never a task
   if (chief && FEELINGS.test(t)) return queenComfort(t);
+
+  // The Treasury: "spent $12 on lunch", "got paid $2000", "budget $300 for groceries", "how much have I spent?"
+  const budget = parseBudget(text);
+  if (budget) { setBudget(budget.category, budget.amount); return `${chief ? 'Penny has' : 'I have'} set the ${budget.category} budget to ${money(budget.amount)} a month. You'll see it in the 💰 Treasury tab.`; }
+  const rec = parseMoney(text);
+  if (rec) {
+    const e = addEntry({ ...rec, by: 'money' });
+    return `${me.id === 'money' ? 'Recorded' : 'Penny recorded it'}: ${e.desc}, ${money(e.amount)} (${e.category}). ${treasuryBrief()} Open the 💰 Treasury tab to see or change it.`;
+  }
+  if (/how much (have i|did i|i('ve)?) (spent|spend|earned|made)|my (spending|budget|finances|money)|treasury|balance this month/.test(t))
+    return `${treasuryBrief()} The full picture is in the 💰 Treasury tab, and you can download it as a spreadsheet there.`;
   if (chief && /(pep talk|encourag|motivat|cheer me|proud of me)/.test(t)) return queenPepTalk();
 
   // Small talk
@@ -518,6 +564,11 @@ function offlineChat(agentId, text) {
 
 function offlineWork(agentId, task) {
   const me = agentById(agentId);
+  if (/\b(track(er|ing)?|ledger|budget|expenses?|spending|financ\w*|money)\b/i.test(task.title) && ['money', 'chief'].includes(agentId) && !/\b(buy|pay|purchase|order)\b/i.test(task.title)) {
+    const msg = setUpTreasury(agentId);
+    updateTask(task.id, { result: msg });
+    return 'The Royal Treasury is open: see the 💰 Treasury tab.';
+  }
   const kind = detectKind(task.title + ' ' + task.notes);
   if (kind === 'email') {
     const to = (task.notes.match(/[\w.+-]+@[\w-]+\.[\w.]+/) || [''])[0];

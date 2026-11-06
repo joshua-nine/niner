@@ -6,6 +6,7 @@ import {
   liveTasks, totalUsage,
 } from './store.js';
 import { sync, onSyncChange, signIn, signUp, signOutSync, resetPassword, friendlyAuthError } from './sync.js';
+import { initTreasury, renderTreasury } from './treasury-ui.js';
 import { chat, townhallTurn, hasKey, routeDirector } from './brain.js';
 import { say, startMeeting, endMeeting, inMeeting, initAgents, sims } from './agents.js';
 
@@ -35,6 +36,7 @@ export function toast(msg, ms = 2800) {
 export function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+  if (name === 'treasury') renderTreasury();
 }
 
 // ── Talk ─────────────────────────────────────────────────────
@@ -349,6 +351,7 @@ export function initUI() {
   $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) sendChat(e); });
   document.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', e => { $('#chat-input').value = b.dataset.say; sendChat(e); }));
   initSyncUI();
+  initTreasury(toast);
   $('#task-form').addEventListener('submit', e => {
     e.preventDefault();
     const title = $('#task-title').value.trim(); if (!title) return;

@@ -143,3 +143,22 @@ label.check { flex-direction: row; align-items: center; gap: 8px; }
 }
 select { max-width: 100%; text-overflow: ellipsis; }
 .row-form select { flex: 0 1 42%; }
+
+/* Royal Treasury */
+.treasury { display: flex; flex-direction: column; gap: 10px; }
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.month-nav b { font-family: var(--head); font-size: 13px; letter-spacing: .05em; }
+.totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.total { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.total span { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+.total b { font-family: var(--mono); font-size: 15px; overflow-wrap: anywhere; }
+.total.in b, .pos { color: var(--neon); }
+.total.out b, .neg { color: #ff8fa3; }
+.budget { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.budget .meta.over { color: var(--red); }
+label.inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+label.inline input { width: 120px; }
+.entry-form { display: flex; flex-direction: column; gap: 8px; }
+.card.entry { text-align: left; color: var(--text); cursor: pointer; font: inherit; width: 100%; }
+.card.entry:hover { border-color: var(--neon); }
+.card.entry.editing { border-color: var(--gold); cursor: default; }

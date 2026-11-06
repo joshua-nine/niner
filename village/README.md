@@ -36,6 +36,13 @@ The folder is still called `village/`, so existing links keep working. It also w
 5. They walk to the Queen's Tower to report, and the Queen reviews the work (🔍). Good work is approved with a note; weak work goes back once with feedback. The Queen then brings the reviewed petitions to the King's Keep.
 6. In **Approvals** you edit, seal, or decline. Sealing an email opens a pre-filled Gmail draft, and **you** press Send.
 
+## 💰 The Royal Treasury (money tracker)
+A **Treasury** tab tracks your money: this month's income, spending and balance, spending by category against monthly budgets, and every entry.
+- **Edit it yourself:** add, change (tap an entry) or delete entries, and set a monthly limit per category.
+- **Penny keeps it live:** tell Penny or the Queen in Talk, for example *“spent $12 on lunch”*, *“paid $900 rent”*, *“got paid $2000”*, *“budget $300 for groceries”*, or *“how much have I spent?”*. Penny records it straight away, and with sync on it appears on all your devices within seconds. With an API key she uses `record_money` / `set_budget` tools.
+- **Download / import:** **⬇ Download spreadsheet** saves a CSV that opens in Excel or Google Sheets. **Import CSV** reads one back (or a bank export with Date / Description / Amount columns) and skips duplicates.
+- **Bookkeeping only:** a request like *“buy dog food for $20”* stays a task, and the purchase comes to you as a petition. Nothing in the Treasury spends money.
+
 ## Use it on your phone and computer (nothing lost)
 Sign in under **Kingdom → Your devices** with the same email and password on each device (your NinerSheet account works). Then:
 - Tasks, petitions, chats, the court and your settings sync in real time through your Firebase account.
@@ -95,6 +102,7 @@ village/
 │   ├── brain.js    Claude (SDK) + tools + offline engine
 │   ├── store.js    tasks, approvals, chats, settings, device merge
 │   ├── sync.js     phone ⇄ computer sync (Firebase), who runs the court
+│   ├── treasury.js / treasury-ui.js   the Royal Treasury (money tracker)
 │   ├── ui.js       side panel
 │   └── main.js     boot + game loop
 ├── CLAUDE.md, RULES.md, STYLE_GUIDE.md
