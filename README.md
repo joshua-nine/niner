@@ -70,37 +70,69 @@ Open `index.html` in a browser. Because Firebase uses ES modules, you need to se
 
 ---
 
-## Firestore Security Rules (Optional — Recommended before sharing)
+## Firestore Security Rules (Required)
 
-In Firebase Console → Firestore → **Rules**, replace the default with:
+"Test mode" rules **expire after 30 days**. After that every read is refused and the dashboard can't load. Use the rules in [`firestore.rules`](firestore.rules) instead: in Firebase console → **Firestore Database → Rules**, replace everything with the contents of that file and click **Publish**. They cover NinerSheet (users, characters, campaigns, invites) and the Agent Kingdom (`kingdoms`).
 
 ```
 rules_version = '2';
+
+// Firestore security rules for NinerSheet + Agent Kingdom.
+// Paste this whole file into Firebase console → Firestore Database → Rules,
+// replacing everything there, then click Publish.
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() { return request.auth != null; }
+    function myEmail()  { return request.auth.token.email.lower(); }
+
+    // Profiles: you write your own; signed-in players can read names
+    // (the campaign page shows member names).
     match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
+      allow read:  if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
     }
 
+    // Character sheets belong to their owner.
     match /characters/{charId} {
-      allow read, write: if request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth != null;
+      allow read, update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
     }
 
+    // Campaigns: members can read and edit; only the owner can delete.
     match /campaigns/{campId} {
-      allow read, write: if request.auth.uid in resource.data.members;
-      allow create: if request.auth != null;
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.auth.uid in request.resource.data.members;
+      allow update: if signedIn() && (
+        request.auth.uid in resource.data.members
+        // accepting an invite: you may add yourself, and change nothing else
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+            && request.resource.data.members.hasAll(resource.data.members)
+            && request.resource.data.members.size() == resource.data.members.size() + 1
+            && request.auth.uid in request.resource.data.members)
+      );
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
-    match /kingdoms/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-
+    // Invites: the person invited and the person who sent it can see it.
     match /invites/{inviteId} {
-      allow read: if request.auth.token.email == resource.data.invitedEmail;
-      allow create: if request.auth != null;
-      allow update: if request.auth.token.email == resource.data.invitedEmail;
+      allow read: if signedIn() && (
+        resource.data.invitedEmail == myEmail()
+        || resource.data.get('invitedBy', '') == request.auth.uid
+      );
+      allow create: if signedIn()
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if signedIn()
+        && resource.data.invitedEmail == myEmail()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
+    // Agent Kingdom: one private document per person, synced across devices.
+    match /kingdoms/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
     }
   }
 }

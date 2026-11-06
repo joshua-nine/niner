@@ -615,3 +615,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   #dice-panel { right: 16px; left: 16px; width: auto; }
   #dice-fab { bottom: 20px; right: 20px; }
 }
+
+/* Database error shown in place of a spinner */
+.load-error {
+  grid-column: 1 / -1;
+  background: rgba(255,45,85,0.08);
+  border: 1px solid var(--red);
+  color: #ffb3c1;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}

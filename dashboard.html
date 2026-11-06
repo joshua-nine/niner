@@ -75,7 +75,7 @@
   </div>
 
   <script type="module">
-    import { requireAuth, injectSharedUI, toast, openModal, closeModal, setupModalClose } from './js/ui.js';
+    import { requireAuth, injectSharedUI, toast, openModal, closeModal, setupModalClose, showLoadError } from './js/ui.js';
     import { getCharacters, createCharacter, deleteCharacter } from './js/characters.js';
     import { getCampaigns, createCampaign, deleteCampaign, getPendingInvites, acceptInvite, declineInvite } from './js/campaigns.js';
     import { auth } from './js/firebase-config.js';
@@ -99,8 +99,13 @@
       await loadAll();
     })();
 
+    // Each section loads on its own: if one fails, it shows why (no endless spinner).
     async function loadAll() {
-      await Promise.all([loadCharacters(), loadCampaigns(), loadInvites()]);
+      await Promise.all([
+        loadCharacters().catch(e => showLoadError(document.getElementById('char-grid'), e)),
+        loadCampaigns().catch(e => showLoadError(document.getElementById('campaign-grid'), e)),
+        loadInvites().catch(e => console.warn('Could not load invites', e)),
+      ]);
     }
 
     // ── Characters ──────────────────────────────────────────────

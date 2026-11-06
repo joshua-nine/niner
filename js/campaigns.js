@@ -1,4 +1,4 @@
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import {
   collection, doc, addDoc, getDocs, getDoc,
   updateDoc, deleteDoc, query, where, arrayUnion,
@@ -48,8 +48,11 @@ export async function deleteCampaign(campaignId) {
 
 // ── Invite system ────────────────────────────────────────────
 export async function sendInvite(campaignId, campaignName, invitedEmail, senderName) {
+  const me = auth.currentUser?.uid;
+  if (!me) throw new Error('Please sign in again.');
   const existing = await getDocs(
     query(collection(db, 'invites'),
+      where('invitedBy', '==', me),
       where('campaignId', '==', campaignId),
       where('invitedEmail', '==', invitedEmail.toLowerCase()),
       where('status', '==', 'pending')
@@ -61,6 +64,7 @@ export async function sendInvite(campaignId, campaignName, invitedEmail, senderN
     campaignId,
     campaignName,
     invitedEmail: invitedEmail.toLowerCase(),
+    invitedBy: me,
     senderName,
     status: 'pending',
     createdAt: serverTimestamp()

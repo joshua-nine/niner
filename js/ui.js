@@ -148,6 +148,38 @@ function displayRoll(result, label) {
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
+// Turn a Firebase error into something a person can act on.
+export function dbErrorMessage(e) {
+  const code = e?.code || '';
+  if (code === 'permission-denied' || /insufficient permissions/i.test(e?.message || ''))
+    return 'The database refused access. Your Firestore security rules have probably expired or are missing. ' +
+           'Fix: Firebase console → Firestore Database → Rules → paste the contents of firestore.rules from the repo → Publish.';
+  if (code === 'unavailable' || /offline|network/i.test(e?.message || ''))
+    return 'Can\'t reach the database. Check your internet connection and refresh.';
+  if (code === 'failed-precondition')
+    return 'The database needs a setting changed: ' + (e.message || code);
+  return 'Something went wrong talking to the database: ' + (e?.message || code || e);
+}
+
+// Show a database error inside a container instead of an endless spinner.
+export function showLoadError(container, e) {
+  console.error(e);
+  if (!container) return;
+  container.innerHTML = '';
+  const box = document.createElement('div');
+  box.className = 'load-error';
+  box.textContent = '⚠ ' + dbErrorMessage(e);
+  container.appendChild(box);
+}
+
+// Any database error nobody caught still gets shown to the user.
+window.addEventListener('unhandledrejection', ev => {
+  const e = ev.reason;
+  if (e && (e.code || '').length && typeof toast === 'function') {
+    try { toast(dbErrorMessage(e), 'error'); } catch { /* toast not ready */ }
+  }
+});
+
 export function requireAuth(redirectTo = 'index.html') {
   return new Promise(resolve => {
     onAuthStateChanged(auth, user => {
