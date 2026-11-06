@@ -14,7 +14,7 @@ export const DEFAULT_CATEGORIES = ['Income', 'Housing', 'Bills & utilities', 'Gr
 const DEFAULT_BUDGETS = { Housing: 0, 'Bills & utilities': 0, Groceries: 0, 'Eating out': 0, Transport: 0, Fun: 0 };
 
 export function freshTreasury() {
-  return { entries: [], budgets: { ...DEFAULT_BUDGETS }, budgetsUpdated: 0, categories: [...DEFAULT_CATEGORIES], currency: '$' };
+  return { entries: [], budgets: { ...DEFAULT_BUDGETS }, budgetsUpdated: 0, categories: [...DEFAULT_CATEGORIES], currency: '$', bills: [], incomes: [], accounts: [], people: [] };
 }
 export const treasury = () => (state.treasury ||= freshTreasury());
 export const liveEntries = () => treasury().entries.filter(e => !e.deleted);
@@ -166,7 +166,11 @@ function parseCSV(text) {
 }
 // Accepts our own export, or any sheet with Date / Description / Amount columns.
 export function importCSV(text) {
-  const rows = parseCSV(text);
+  // An "Everything" download has sections; only its SPENDING section holds entries.
+  const sec = text.search(/^\s*SPENDING\s*$/m);
+  if (sec >= 0) text = text.slice(sec).replace(/^\s*SPENDING\s*\r?\n/, '');
+  else if (/^\s*(BILLS|INCOME|ACCOUNTS)/.test(text.replace(/^\ufeff/, ''))) throw new Error('No spending section in that file.');
+  const rows = parseCSV(text.replace(/^\ufeff/, ''));
   if (rows.length < 2) throw new Error('No rows found.');
   const head = rows[0].map(h => h.trim().toLowerCase());
   const col = (...names) => head.findIndex(h => names.some(n => h.includes(n)));
@@ -195,8 +199,17 @@ export function mergeTreasury(local, remote) {
   const map = new Map(local.entries.map(e => [e.id, e]));
   for (const e of remote.entries || []) { const m = map.get(e.id); if (!m || (e.updated || 0) > (m.updated || 0)) map.set(e.id, e); }
   const newerBudgets = (remote.budgetsUpdated || 0) > (local.budgetsUpdated || 0);
+  const byId = (x = [], y = []) => {             // bills, incomes, accounts: newest edit of each wins
+    const m = new Map(x.map(r => [r.id, r]));
+    for (const r of y) { const o = m.get(r.id); if (!o || (r.updated || 0) > (o.updated || 0)) m.set(r.id, r); }
+    return [...m.values()];
+  };
   return {
     ...local,
+    bills: byId(local.bills, remote.bills),
+    incomes: byId(local.incomes, remote.incomes),
+    accounts: byId(local.accounts, remote.accounts),
+    people: [...new Set([...(local.people || []), ...(remote.people || [])])],
     entries: [...map.values()].sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 3000),
     budgets: newerBudgets ? remote.budgets : local.budgets,
     budgetsUpdated: Math.max(local.budgetsUpdated || 0, remote.budgetsUpdated || 0),

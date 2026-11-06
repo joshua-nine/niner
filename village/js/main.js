@@ -4,6 +4,8 @@ import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, sa
 import { state, log, onChange } from './store.js';
 import { workOnTask, superviseNext, nextForReview, queenVisitLine, queenDelegate } from './brain.js';
 import { initSync, sync } from './sync.js';
+import { upcomingBills, niceDate } from './household.js';
+import { money } from './treasury.js';
 import { initUI, ui, selectAgent } from './ui.js';
 import { drawWildDragon } from './sprites.js';
 import { DRAGON_PERCH } from './config.js';
@@ -28,6 +30,19 @@ initUI();
 window.__kingdomBooted = true;          // tells the start-up safety net all is well
 ui.onSelect = () => {};
 initSync();
+
+// ── Penny's daily bill reminder ─────────────────────────────
+function billReminder() {
+  if (!sync.leader) return;
+  const day = new Date().toDateString();
+  try { if (localStorage.getItem('kingdom-bill-reminder') === day) return; localStorage.setItem('kingdom-bill-reminder', day); } catch { /* fine */ }
+  const up = upcomingBills(3);
+  if (!up.length) return;
+  log('money', 'Bills due soon: ' + up.map(x => `${x.bill.name} ${money(x.bill.amount || 0)} (${x.overdue ? 'overdue ' : ''}${niceDate(x.due)})`).join(', '), 'approval');
+  say('money', `${up.length} bill${up.length > 1 ? 's' : ''} due soon, Your Majesty. See the Treasury.`, 6);
+}
+setTimeout(billReminder, 8000);
+setInterval(billReminder, 3600_000);
 
 // ── The Queen supervises every task ──────────────────────────
 // Finished tasks and new petitions wait for her review. She takes them one
