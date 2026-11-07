@@ -240,6 +240,7 @@ export function mergeStates(local, remote) {
     out.metaUpdated = remote.metaUpdated;
   }
   out.treasury = mergeTreasury(local.treasury, remote.treasury);
+  out.inboxSeen = { ...(remote.inboxSeen || {}), ...(local.inboxSeen || {}) };   // inbox items applied on any device
   out.version = Math.max(local.version || 0, remote.version || 0);
   return out;
 }

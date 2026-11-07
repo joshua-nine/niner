@@ -14,6 +14,10 @@
  *    are never written.
  *  • "Pull from sheet": reads your Recurring Bills, Accounts & Balances and
  *    Income & Cash Flow tabs and sends them to the kingdom (read-only).
+ *  • Hand-off with Claude: writes the court's tasks to "Kingdom – Tasks", and
+ *    keeps a "Kingdom – Inbox" tab where Claude (in your Claude app / Claude
+ *    Code, on your subscription) leaves tasks, results, notes, petitions and
+ *    bill updates; the kingdom picks them up and marks them "done in app".
  *  • Bill documents: saves photos/PDFs you attach in the kingdom into a
  *    "Kingdom – Bills" folder in your Google Drive, and can move them to the
  *    bin again (only files inside that folder).
@@ -33,8 +37,11 @@ var TAB_BILLS = 'Kingdom – Bills';
 var TAB_SPENDING = 'Kingdom – Spending';
 var TAB_ACCOUNTS = 'Kingdom – Accounts';
 var TAB_INCOME = 'Kingdom – Income';
+var TAB_TASKS = 'Kingdom – Tasks';
+var TAB_INBOX = 'Kingdom – Inbox';
+var INBOX_HEADER = ['ID', 'Created', 'From', 'To', 'Type', 'Title', 'Details', 'Status', 'App note', 'Updated'];
 var DOCS_FOLDER = 'Kingdom – Bills';
-var VERSION = 2;
+var VERSION = 3;
 
 // ── Entry points ──────────────────────────────────────────────
 function doPost(e) {
@@ -44,6 +51,7 @@ function doPost(e) {
     if (body.action === 'sync') return sync_(body);
     if (body.action === 'upload') return upload_(body);
     if (body.action === 'trash') return trash_(body);
+    if (body.action === 'inbox-ack') return inboxAck_(body);
     if (body.action === 'ping') return { ok: true, version: VERSION, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
     throw new Error('Unknown action');
   });
@@ -54,6 +62,7 @@ function doGet(e) {
     var p = (e && e.parameter) || {};
     checkKey_(p.key);
     if (p.action === 'pull') return pull_();
+    if (p.action === 'inbox') return inbox_();
     if (p.action === 'ping') return { ok: true, version: VERSION, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
     throw new Error('Unknown action');
   });
@@ -99,6 +108,9 @@ function sync_(body) {
       (t.incomes || []).filter(function (x) { return !x.deleted; })
         .map(function (i) { return [i.name, i.owner || '', i.depositsTo || '', num_(i.amount), i.frequency || '', i.notes || '']; }));
 
+    if (body.tasks) writeTab_(ss, TAB_TASKS, ['Task ID', 'Courtier', 'Title', 'Status', 'Notes', 'Result', 'Created', 'From'],
+      body.tasks.map(function (k) { return [k.id, k.ownerName || k.owner, k.title, k.status, k.notes || '', k.result || '', k.created || '', k.byName || k.by || '']; }));
+    inboxSheet_(ss);                                   // make sure the hand-off tab exists
     var ticked = body.tickPaid === false ? null : tickPaid_(ss, bills, months);
     return { ok: true, bills: bills.length, entries: (t.entries || []).length, ticked: ticked };
   } finally {
@@ -165,6 +177,51 @@ function tickPaid_(ss, bills, months) {
     });
   }
   return { matched: matched, of: bills.length, cellsChanged: cells, columns: months.map(label_) };
+}
+
+// ── Hand-off with Claude: the Inbox tab ──────────────────────
+// Claude appends rows (Status "new"); the kingdom reads them and acks.
+function inboxSheet_(ss) {
+  var sh = ss.getSheetByName(TAB_INBOX);
+  if (!sh) {
+    sh = ss.insertSheet(TAB_INBOX);
+    sh.getRange(1, 1, 1, INBOX_HEADER.length).setValues([INBOX_HEADER]);
+    sh.getRange(1, 1, 1, INBOX_HEADER.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function inbox_() {
+  var sh = inboxSheet_(SpreadsheetApp.getActiveSpreadsheet());
+  var v = sh.getDataRange().getValues(), items = [];
+  for (var r = 1; r < v.length; r++) {
+    var status = norm_(v[r][7]);
+    var title = String(v[r][5] == null ? '' : v[r][5]).trim(), details = String(v[r][6] == null ? '' : v[r][6]).trim();
+    if (!title && !details) continue;
+    if (status && status !== 'new') continue;
+    var id = String(v[r][0] == null ? '' : v[r][0]).trim() || ('row' + (r + 1));
+    items.push({ id: id, row: r + 1, created: String(v[r][1] || ''), from: String(v[r][2] || '').trim(), to: String(v[r][3] || '').trim(),
+      type: norm_(v[r][4]) || 'task', title: title, details: details });
+  }
+  return { ok: true, items: items };
+}
+function inboxAck_(body) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = inboxSheet_(SpreadsheetApp.getActiveSpreadsheet());
+    var v = sh.getDataRange().getValues(), done = 0, acks = body.acks || [];
+    var stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    acks.forEach(function (a) {
+      for (var r = 1; r < v.length; r++) {
+        var id = String(v[r][0] == null ? '' : v[r][0]).trim() || ('row' + (r + 1));
+        if (id !== a.id) continue;
+        sh.getRange(r + 1, 8, 1, 3).setValues([[a.ok === false ? 'error' : 'done in app', String(a.note || '').slice(0, 300), stamp]]);
+        done++; break;
+      }
+    });
+    return { ok: true, acked: done };
+  } finally { lock.releaseLock(); }
 }
 
 // ── Bill documents in Google Drive ───────────────────────────

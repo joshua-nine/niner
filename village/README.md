@@ -33,6 +33,14 @@ The folder is still called `village/`, so existing links keep working. It also w
 - Courtiers post in their own chat when they get a task (📜), when it's done (✅, with the result), when the Queen sends it back (🔁), and when a petition awaits your seal (📨).
 - In free mode, jobs the court can't do itself (like rewriting a resume) come back as a **real starter plan**, with an honest note that the steps are yours.
 
+## Real thinking on your Claude subscription (the Inbox hand-off)
+Free mode can't write a resume or read a bill PDF, but Claude can, on your subscription in the Claude app or Claude Code. The two meet in your tracker spreadsheet:
+- The app writes the court's tasks to **Kingdom – Tasks**.
+- Claude reads them, does the work, and appends rows to **Kingdom – Inbox**: new tasks, finished results, notes, petitions (e.g. an email draft for your seal) and bill updates (new amount or due date read from a document).
+- The app picks them up on open, every 10 minutes, or when you tap **📥 Check inbox**. It puts each item in the right place (the Queen reviews results; petitions wait for your seal) and marks the row *done in app*.
+
+Try asking Claude: *“Check the court's to-do list in my sheet and do the resume task”* or *“Read the new Pepco bill in my Kingdom – Bills folder and update the amount.”* The full row format is in [`INBOX.md`](INBOX.md).
+
 ## Staying up to date
 The app always fetches the newest version when online (a small service worker, `sw.js`), keeps a copy for offline use, and shows **✨ A new version is ready → Refresh** when one is published (`version.json` vs `js/version.js`; bump both on release).
 
@@ -131,10 +139,11 @@ village/
 │   ├── sync.js     phone ⇄ computer sync (Firebase), who runs the court
 │   ├── treasury.js / household.js / treasury-ui.js   the Royal Treasury: spending, bills, income, accounts
 │   ├── sheets.js   sends the Treasury to your Google Sheet / pulls it back
+│   ├── inbox.js    applies work Claude leaves in the sheet's Kingdom – Inbox
 ├── sheets-bridge/Code.gs   the Apps Script you paste into your sheet
 │   ├── ui.js       side panel
 │   └── main.js     boot + game loop
-├── CLAUDE.md, RULES.md, STYLE_GUIDE.md
+├── CLAUDE.md, RULES.md, STYLE_GUIDE.md, INBOX.md (hand-off format for Claude)
 ├── agents/<id>/CLAUDE.md, todo.md
 └── approvals/pending/, approvals/done/
 ```
