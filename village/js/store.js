@@ -143,11 +143,22 @@ export function totalUsage() {
 //              … or → needs_approval (the King seals it) → done / declined
 export const liveTasks = () => state.tasks.filter(t => !t.deleted);
 
-export function addTask({ title, owner, notes = '', by = 'mayor' }) {
+// A short line from a courtier in their own chat (task news, results…),
+// so each courtier's personal page shows what they've been given and done.
+export function chatNote(agentId, text) {
+  if (!agentId || agentId === 'mayor') return;
+  (state.chats[agentId] ||= []).push({ role: 'assistant', text, ts: Date.now(), note: true });
+  save();
+}
+
+export function addTask({ title, owner, notes = '', by = 'mayor', quiet = false }) {
   const now = Date.now();
   const t = { id: uid('T'), title, owner, notes, by, status: 'todo', progress: 0, created: now, updated: now, result: '', revisions: 0 };
   state.tasks.unshift(t);
   log(owner, `New task: ${title}`, 'task');
+  if (!quiet) chatNote(owner, by === 'mayor'
+    ? `📜 New task from you: “${title}”. I'll head home and get to work.`
+    : `📜 New task from ${agentById(by)?.name || by}: “${title}”.`);
   save();
   return t;
 }

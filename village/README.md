@@ -28,6 +28,14 @@ The folder is still called `village/`, so existing links keep working. It also w
 - **Moral support.** She celebrates your wins, notices when you sound tired or overwhelmed, and leads with kindness before task talk. Every few minutes she walks to the King's Keep just to check on you. When she's selected in **Talk** you get quick buttons: 💜 *Pep talk*, 😮‍💨 *Rough day*, 📋 *How's the court?*. If you ever say something that sounds like real distress, any member of the court responds with care and points you to real people (someone you trust, or a crisis line such as 988 in the US), and never turns it into a task.
 - **Supervises every task.** Nothing is marked done, and no petition reaches you, until she has reviewed it. With Claude she checks the work is correct, complete, honest and within the rules. She can send it back **once** with specific feedback (the courtier redoes it); after that she passes it on with a note. Her note (👑) is shown on every task and petition. Without an API key she does a lighter check and approves.
 
+## Tasks everywhere
+- Every task, whether made in **To-Do**, in **Talk**, or assigned by the Queen, shows in the **To-Do** list (which opens on *All*) **and** on that courtier's page in **Talk**, under **📜 My tasks**. The Queen's page shows the whole court's.
+- Courtiers post in their own chat when they get a task (📜), when it's done (✅, with the result), when the Queen sends it back (🔁), and when a petition awaits your seal (📨).
+- In free mode, jobs the court can't do itself (like rewriting a resume) come back as a **real starter plan**, with an honest note that the steps are yours.
+
+## Staying up to date
+The app always fetches the newest version when online (a small service worker, `sw.js`), keeps a copy for offline use, and shows **✨ A new version is ready → Refresh** when one is published (`version.json` vs `js/version.js`; bump both on release).
+
 ## How work flows
 1. You tell Queen Elara: *"Reply to Sam and say Friday works, and book a dentist appointment."*
 2. The Queen calls `add_todo` twice: one task for Iris, one for Cal.
@@ -59,6 +67,7 @@ The Treasury can keep a Google Sheet up to date through a small bridge script ([
   2. In your sheet, open **Extensions → Apps Script**, replace everything, paste, and click Save.
   3. Click **Deploy → New deployment → Web app**, with *Execute as: Me* and *Who has access: Anyone*. Click Deploy and allow access. If Google says the app isn't verified, choose *Advanced → Go to project*; it's your own script.
   4. Paste the **Web app URL** into the kingdom and tap **Test connection**.
+- **📎 Bill documents:** tap **📎 Attach** on any bill to add a photo or PDF. Photos are shrunk first. It's saved in a **“Kingdom – Bills”** folder in your Google Drive (named like `Pepco (Electric) – 2026-11.jpg`), and a 📄 link appears on the bill on every device. **✕** moves the file to your Drive bin. This needs bridge script version 2 (the kingdom tells you if yours is older: copy the script again, then *Deploy → Manage deployments → ✏️ → New version*).
 - Requests need the key, so the link alone doesn't let anyone else into your sheet. **New key** under *Key & advanced* rotates it; paste the script again after rotating.
 
 ## Use it on your phone and computer (nothing lost)

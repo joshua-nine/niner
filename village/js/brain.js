@@ -7,7 +7,7 @@
 // request_approval, which lands in the King's Approvals queue.
 import { GROUND_RULES, PRICES } from './config.js';
 import {
-  state, save, agentById, addTask, updateTask, requestApproval, log, openTasksFor,
+  state, save, agentById, addTask, updateTask, requestApproval, log, openTasksFor, chatNote,
   addUsage, liveTasks, updateApproval,
 } from './store.js';
 import { addEntry, setBudget, parseMoney, parseBudget, treasuryBrief, setUpTreasury, money, treasury } from './treasury.js';
@@ -129,7 +129,7 @@ function runTool(agentId, name, input) {
       const t = addTask({ title: input.title, owner: 'chief', notes: `From ${me.name} for ${target.name}: ${input.notes || ''}`, by: agentId });
       return { ok: true, task_id: t.id, note: 'Only the Queen (Chief of Staff) assigns work across the court, so this went to her.' };
     }
-    const t = addTask({ title: input.title, owner, notes: input.notes || '', by: agentId });
+    const t = addTask({ title: input.title, owner, notes: input.notes || '', by: agentId, quiet: owner === agentId });
     return { ok: true, task_id: t.id, owner: target.name };
   }
   if (name === 'request_approval') {
@@ -368,18 +368,23 @@ export async function superviseNext() {
       notes: `${task.notes ? task.notes + '\n' : ''}Queen's feedback: ${review.feedback || review.note}`,
     });
     log('chief', `Sent “${task.title}” back to ${owner?.name}: ${review.feedback || review.note}`, 'warn');
+    chatNote(owner?.id, `🔁 The Queen sent “${task.title}” back: ${review.feedback || review.note} I'm on it.`);
   } else if (type === 'task') {
     updateTask(item.id, { status: 'done', queenNote: review.note });
     log('chief', `Reviewed and approved “${item.title}”`, 'ok');
+    chatNote(item.owner, `✅ Done: “${item.title}”.${item.result ? `\n\n${item.result}` : ''}\n\n👑 ${agentById('chief')?.name || 'The Queen'}: ${review.note}`);
   } else {
     updateApproval(item.id, { stage: 'king', queenNote: review.note });
     log('chief', `Reviewed “${item.summary}”. It now awaits your royal seal`, 'approval');
+    chatNote(item.from, `📨 “${item.summary}” is drafted and waiting for your seal in Approvals.`);
   }
   return { type, item, owner, ...review };
 }
 
 function offlineReview(type, item, owner) {
   const name = owner?.name || 'The courtier';
+  if (type === 'task' && /^Plan from /.test(item.result || ''))
+    return { verdict: 'approve', note: `${name}'s plan is ready and sound. The next steps are yours, Your Majesty; just tell us when you'd like help with one.`, feedback: '' };
   const notes = type === 'task'
     ? [`${name} did good work here. Marked complete.`, `Checked and complete. Well done, ${name}.`, `This meets the standard of the court.`]
     : [`I've read ${name}'s draft. It's ready for your seal, or edit it first if you like.`, `Checked: nothing goes out until you approve. The draft looks sound.`];
@@ -477,6 +482,8 @@ export function queenDelegate(task) {
     notes: `${task.notes ? task.notes + '\n' : ''}Assigned by ${queen}.`,
   });
   log('chief', `Assigned “${task.title}” to ${target.name}, ${target.role}`, 'task');
+  chatNote(target.id, `📜 New task from ${queen}: “${task.title}”.`);
+  chatNote('chief', `I gave “${task.title}” to ${target.name}.`);
   return target;
 }
 
@@ -599,7 +606,7 @@ function offlineChat(agentId, text) {
       (kind ? ` Since it involves ${kind === 'spend' ? 'spending gold from the treasury' : kind === 'calendar' ? 'your calendar' : kind === 'post' ? 'posting publicly' : 'sending an email'}, nothing goes out until you set your seal on it.` : '') +
       ' Watch them head home to work on it.';
   }
-  const task = addTask({ title: titleFrom(text), owner: agentId, notes: `Requested directly by ${state.mayorName}: "${text}"`, by: 'mayor' });
+  const task = addTask({ title: titleFrom(text), owner: agentId, notes: `Requested directly by ${state.mayorName}: "${text}"`, by: 'mayor', quiet: true });
   return `At once, Your Majesty. “${task.title}” is on my list. I'll set to work and report to ${agentById('chief')?.name || 'the Queen'} when it's done.`;
 }
 
@@ -640,8 +647,62 @@ function offlineWork(agentId, task) {
     } });
     return `Found a slot for “${task.title}” (tomorrow 10:00) — needs your approval.`;
   }
-  updateTask(task.id, { result: `Offline mode: broke “${task.title}” into next steps and filed notes. Add an API key for real work.` });
-  return `Done with “${task.title}”. Notes are on the task card.`;
+  updateTask(task.id, { result: offlinePlan(agentId, task) });
+  return `I've made a plan for “${task.title}”. It's on the task card.`;
+}
+
+// Free mode can't do open-ended work, but a courtier can hand back a real
+// starter plan, and be honest that the next steps are the King's.
+const PLANS = [
+  [/\b(resume|résumé|cv|cover letter|job application|linkedin profile)\b/i, [
+    'Pick one target job and copy its posting; highlight the skills and keywords it repeats.',
+    'List your last 3 roles. For each, write 2–3 wins as "did X, which led to Y" (numbers where you can).',
+    'Translate military or technical terms into plain civilian words the posting uses.',
+    'Write a 2-line summary at the top that matches the target job.',
+    'Keep it to 1–2 pages, save as PDF, and name it "First Last – Resume".',
+  ]],
+  [/\b(learn|study|course|class|homework|exam|certif\w*|practice)\b/i, [
+    'Write down what "done" looks like (a certificate, a project, a grade).',
+    'Split it into weekly chunks you can finish in 3–4 short sessions.',
+    'Block those sessions on your calendar (ask Cal).',
+    'After each session, write one line on what you learned and what\'s next.',
+  ]],
+  [/\b(workout|gym|exercise|run|fitness|lose weight|diet|meal plan|meals?)\b/i, [
+    'Choose 3 days this week and a fixed time for each.',
+    'Keep each session short: 10 min warm-up, 25 min main, 5 min stretch.',
+    'Plan simple meals for the same days; make a grocery list from them.',
+    'Tick each session off; aim for 3 in a row before adding more.',
+  ]],
+  [/\b(clean|declutter|organi[sz]e|chores?|laundry|garage|closet|yard)\b/i, [
+    'Pick one area only; set a 25-minute timer.',
+    'Three piles: keep, donate, toss. Bag the toss pile straight away.',
+    'Wipe and put back what you keep; take the donate bag to the car.',
+    'Book the next area for another day.',
+  ]],
+  [/\b(trip|travel|vacation|holiday|flight|hotel)\b/i, [
+    'Set dates, budget and who\'s going.',
+    'Compare 2–3 options for travel and stay; note total cost of each.',
+    'Pick one and ask for a petition before anything is booked.',
+    'Make a packing list a week before.',
+  ]],
+  [/\b(birthday|anniversary|gift|present|party|wedding|celebrat\w*)\b/i, [
+    'Note the date and the budget.',
+    'List 3 gift or plan ideas they\'d love; pick one.',
+    'Order or book it at least a week ahead (comes to you as a petition).',
+    'Add a reminder two days before for a card.',
+  ]],
+];
+export function offlinePlan(agentId, task) {
+  const me = agentById(agentId);
+  const text = `${task.title} ${task.notes || ''}`;
+  const steps = (PLANS.find(([re]) => re.test(text)) || [null, [
+    'Decide what "done" looks like for this, in one sentence.',
+    'Break it into 3 small steps you could each finish in under an hour.',
+    'Put the first step on your calendar this week.',
+    'Tell me when a step is done and I\'ll track the rest.',
+  ]])[1];
+  return `Plan from ${me?.name || 'the court'} for “${task.title}”:\n` + steps.map((s, i) => `${i + 1}. ${s}`).join('\n') +
+    `\n\nIn free mode I can plan and track this, but the steps are yours. For a full draft (like a rewritten resume), paste this plan into your Claude app.`;
 }
 
 function offlineTownhall(agentId, topic) {

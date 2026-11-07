@@ -10,7 +10,7 @@ import {
   incomeTotals, billTotals, accountTotals, annualAmount, importTrackerFile, billsCSV, incomeCSV, accountsCSV,
   FREQUENCIES, ACCOUNT_TYPES, niceDate, todayISO, toNumber,
 } from './household.js';
-import { sheetSettings, sheetReady, sheetStatus, newKey, testSheet, sendToSheet, pullFromSheet, bridgeScript } from './sheets.js';
+import { sheetSettings, sheetReady, sheetStatus, newKey, testSheet, sendToSheet, pullFromSheet, bridgeScript, uploadDoc, trashDoc } from './sheets.js';
 import { touchMeta } from './store.js';
 
 const $ = (s) => document.querySelector(s);
@@ -74,6 +74,34 @@ function editor(kind, item) {
       isNew ? null : h('button', { class: 'btn btn-danger', onclick: () => { if (confirm(`Delete ${item.name}?`)) { removeItem(kind, item.id); editing = null; rerender(); } } }, 'Delete')));
 }
 
+// 📎 Bill documents (photos / PDFs), saved to the King's Google Drive via the bridge.
+function attachButton(b) {
+  const input = h('input', { type: 'file', accept: 'image/*,application/pdf', hidden: true });
+  input.addEventListener('change', async () => {
+    const file = input.files[0]; if (!file) return;
+    toastFn(`Uploading ${file.name}…`);
+    try {
+      const doc = await uploadDoc(file, { billName: b.name, month });
+      updateItem('bills', b.id, { docs: [...(b.docs || []), doc] });
+      toastFn('Saved to your Google Drive and attached to the bill.');
+    } catch (e) { toastFn(e.message); }
+    input.value = ''; rerender();
+  });
+  return h('label', { class: 'btn btn-ghost file-btn', title: 'Attach a photo or PDF of this bill' }, '📎 Attach', input);
+}
+function docList(b) {
+  const docs = (b.docs || []).slice().sort((x, y) => (y.month || '').localeCompare(x.month || '') || y.added - x.added);
+  if (!docs.length) return null;
+  return h('div', { class: 'docs' }, ...docs.slice(0, 6).map(d => h('span', { class: 'doc' },
+    h('a', { href: d.url, target: '_blank', rel: 'noopener' }, `📄 ${d.month ? monthName(d.month) : d.name}`),
+    h('button', { class: 'linkish', title: 'Remove (moves it to your Drive bin)', onclick: async () => {
+      if (!confirm(`Remove “${d.name}”? It moves to the bin in your Google Drive.`)) return;
+      try { await trashDoc(d); } catch (e) { if (!/not found|no item/i.test(e.message)) { toastFn(e.message); return; } }
+      updateItem('bills', b.id, { docs: (b.docs || []).filter(x => x.id !== d.id) }); rerender();
+    } }, '✕'))),
+    docs.length > 6 ? h('span', { class: 'meta' }, `+${docs.length - 6} more in Drive`) : null);
+}
+
 const STATUS = { paid: ['✓ Paid', 'paid'], overdue: ['Overdue', 'overdue'], soon: ['Due soon', 'soon'], upcoming: ['Upcoming', 'upcoming'], nodate: ['No date', 'nodate'] };
 
 export function renderTreasury(force = false) {
@@ -119,9 +147,11 @@ export function renderTreasury(force = false) {
         h('span', { class: `pill-s ${cls}` }, label)),
       b.balance ? h('div', { class: 'meta' }, `Balance owed ${money(b.balance)}`) : null,
       b.notes ? h('div', { class: 'meta' }, b.notes) : null,
+      docList(b),
       h('div', { class: 'btn-row' }, x.status === 'paid'
         ? h('button', { class: 'btn btn-ghost', onclick: () => { unmarkPaid(b.id, month); rerender(); } }, 'Undo paid')
-        : h('button', { class: 'btn', onclick: () => { markPaid(b.id, { month }); toastFn(`${b.name} marked paid and recorded.`); rerender(); } }, 'Mark paid'))));
+        : h('button', { class: 'btn', onclick: () => { markPaid(b.id, { month }); toastFn(`${b.name} marked paid and recorded.`); rerender(); } }, 'Mark paid'),
+        attachButton(b))));
   }
   const owners = people();
   body.append(section('bills', `🧾 Bills · ${monthName(month)}`,
@@ -238,7 +268,7 @@ function sheetSection() {
   const tick = h('input', { type: 'checkbox', checked: st.tickPaid !== false });
   tick.addEventListener('change', () => { st.tickPaid = tick.checked; touchMeta(); });
   return section('sheet', `🔗 Google Sheet ${sheetReady() ? '· connected' : '· not connected'}`,
-    h('p', { class: 'note' }, 'Keeps your Google Sheet up to date. The kingdom writes its own tabs (Kingdom – Bills, Spending, Accounts, Income) and ticks a “Paid <month>” column in your Recurring Bills tab. Your other cells and formulas are never changed.'),
+    h('p', { class: 'note' }, 'Keeps your Google Sheet up to date. The kingdom writes its own tabs (Kingdom – Bills, Spending, Accounts, Income) and ticks a “Paid <month>” column in your Recurring Bills tab. Your other cells and formulas are never changed. It also saves bill documents you attach (📎) to a “Kingdom – Bills” folder in your Google Drive.'),
     sheetReady() ? null : h('ol', { class: 'steps' },
       h('li', {}, h('button', { class: 'btn', onclick: run(async () => { await navigator.clipboard.writeText(await bridgeScript()); }, () => 'Script copied, with your key filled in.') }, '📋 Copy the bridge script')),
       h('li', {}, 'Open your tracker sheet → Extensions → Apps Script. Delete what\'s there, paste, and click 💾 Save.'),

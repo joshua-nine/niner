@@ -14,6 +14,9 @@
  *    are never written.
  *  • "Pull from sheet": reads your Recurring Bills, Accounts & Balances and
  *    Income & Cash Flow tabs and sends them to the kingdom (read-only).
+ *  • Bill documents: saves photos/PDFs you attach in the kingdom into a
+ *    "Kingdom – Bills" folder in your Google Drive, and can move them to the
+ *    bin again (only files inside that folder).
  *
  * Requests must carry the secret KEY, so only your kingdom can use it.
  */
@@ -30,6 +33,8 @@ var TAB_BILLS = 'Kingdom – Bills';
 var TAB_SPENDING = 'Kingdom – Spending';
 var TAB_ACCOUNTS = 'Kingdom – Accounts';
 var TAB_INCOME = 'Kingdom – Income';
+var DOCS_FOLDER = 'Kingdom – Bills';
+var VERSION = 2;
 
 // ── Entry points ──────────────────────────────────────────────
 function doPost(e) {
@@ -37,7 +42,9 @@ function doPost(e) {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     checkKey_(body.key);
     if (body.action === 'sync') return sync_(body);
-    if (body.action === 'ping') return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
+    if (body.action === 'upload') return upload_(body);
+    if (body.action === 'trash') return trash_(body);
+    if (body.action === 'ping') return { ok: true, version: VERSION, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
     throw new Error('Unknown action');
   });
 }
@@ -47,7 +54,7 @@ function doGet(e) {
     var p = (e && e.parameter) || {};
     checkKey_(p.key);
     if (p.action === 'pull') return pull_();
-    if (p.action === 'ping') return { ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
+    if (p.action === 'ping') return { ok: true, version: VERSION, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
     throw new Error('Unknown action');
   });
 }
@@ -158,6 +165,28 @@ function tickPaid_(ss, bills, months) {
     });
   }
   return { matched: matched, of: bills.length, cellsChanged: cells, columns: months.map(label_) };
+}
+
+// ── Bill documents in Google Drive ───────────────────────────
+function docsFolder_() {
+  var it = DriveApp.getFoldersByName(DOCS_FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(DOCS_FOLDER);
+}
+function upload_(body) {
+  if (!body.data) throw new Error('No file data.');
+  var name = String(body.name || 'Bill document').replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 120);
+  var blob = Utilities.newBlob(Utilities.base64Decode(body.data), body.mimeType || 'application/octet-stream', name);
+  var file = docsFolder_().createFile(blob);
+  file.setDescription('Added from the Agent Kingdom' + (body.billName ? ' for ' + body.billName : '') + (body.month ? ' (' + body.month + ')' : ''));
+  return { ok: true, id: file.getId(), url: file.getUrl(), name: file.getName(), size: file.getSize() };
+}
+function trash_(body) {
+  var file = DriveApp.getFileById(String(body.id || ''));
+  var parents = file.getParents(), inFolder = false, folderId = docsFolder_().getId();
+  while (parents.hasNext()) if (parents.next().getId() === folderId) inFolder = true;
+  if (!inFolder) throw new Error('Only files in the "' + DOCS_FOLDER + '" folder can be removed.');
+  file.setTrashed(true);
+  return { ok: true };
 }
 
 // ── Pull: sheet → kingdom (read-only) ────────────────────────
