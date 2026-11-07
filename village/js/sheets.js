@@ -48,7 +48,8 @@ async function call(method, body, params = '') {
 export async function testSheet() {
   if (!sheetReady()) throw new Error('Paste the Web app URL first (it starts with https://script.google.com/).');
   const r = await call('GET', null, `?action=ping&key=${encodeURIComponent(sheetSettings().key)}`);
-  emit(`Connected to “${r.sheet}”.`, true);
+  bridgeVersion = r.version || 1;
+  emit(`Connected to “${r.sheet}”.` + (bridgeVersion < 2 ? ' Your bridge script is an older version: copy it again and deploy a new version to attach bill documents.' : ''), bridgeVersion >= 2);
   return r;
 }
 
@@ -67,6 +68,39 @@ export async function sendToSheet({ force = false } = {}) {
   emit(`Sheet updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}: ${r.bills} bills, ${r.entries} entries` +
     (t && !t.error ? ` · Paid column: ${t.matched}/${t.of} bills matched` : t?.error ? ` · ${t.error}` : '') + '.', true);
   return r;
+}
+
+// ── Bill documents → Google Drive (bridge v2) ───────────────
+let bridgeVersion = 0;
+const readAsBase64 = (blob) => new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = bad; r.readAsDataURL(blob); });
+// Photos are shrunk (max 2000px, JPEG) so they upload fast on mobile data.
+async function shrinkImage(file) {
+  if (!/^image\/(jpeg|png|webp|heic|heif)/i.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+    return out && out.size < file.size ? out : file;
+  } catch { return file; }
+}
+export async function uploadDoc(file, { billName = '', month = '' } = {}) {
+  if (!sheetReady()) throw new Error('Connect your Google Sheet first (Treasury → Google Sheet). Bill documents are saved to your Google Drive through it.');
+  if (file.size > 25 * 1024 * 1024) throw new Error('That file is over 25 MB.');
+  const blob = await shrinkImage(file);
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'pdf').toLowerCase();
+  const name = `${billName || 'Bill'} – ${month || new Date().toISOString().slice(0, 7)}.${ext}`;
+  emit(`Uploading ${name}…`, null);
+  let r;
+  try { r = await call('POST', { key: sheetSettings().key, action: 'upload', name, mimeType: blob.type || file.type, data: await readAsBase64(blob), billName, month }); }
+  catch (e) { throw new Error(/unknown action/i.test(e.message) ? 'Your bridge script is an older version. In Treasury → Google Sheet, copy the script again, paste it in Apps Script, then Deploy → Manage deployments → ✏️ → New version → Deploy.' : e.message); }
+  emit(`Saved “${r.name}” to your Drive (Kingdom – Bills).`, true);
+  return { id: r.id, url: r.url, name: r.name, size: r.size, mimeType: blob.type || file.type, month, added: Date.now() };
+}
+export async function trashDoc(doc) {
+  if (!sheetReady()) throw new Error('The Google Sheet isn\'t connected.');
+  await call('POST', { key: sheetSettings().key, action: 'trash', id: doc.id });
 }
 
 export async function pullFromSheet() {

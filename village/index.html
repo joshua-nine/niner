@@ -54,6 +54,7 @@
       <div class="panel active" id="panel-chat">
         <div id="people" class="people"></div>
         <div class="who" id="who"></div>
+        <div id="agent-tasks" class="agent-tasks"></div>
         <div id="queen-quick" class="quick hidden">
           <button class="chip" data-say="I could use a pep talk.">💜 Pep talk</button>
           <button class="chip" data-say="Honestly, I'm having a rough day and feeling overwhelmed.">😮‍💨 Rough day</button>
@@ -76,11 +77,11 @@
         <div class="filters">
           <select id="task-filter-owner"><option value="">Everyone</option></select>
           <select id="task-filter-status">
+            <option value="all">All (newest first)</option>
             <option value="open">Open</option>
             <option value="review">Queen reviewing</option>
             <option value="needs_approval">Awaits your seal</option>
             <option value="done">Done</option>
-            <option value="all">All</option>
           </select>
         </div>
         <div id="task-list" class="cards"></div>

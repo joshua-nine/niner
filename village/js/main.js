@@ -1,10 +1,11 @@
 // Boot: draw the world, spawn villagers, run the loop, wire clicks.
 import { renderStatic, renderDynamic, size, buildingAt } from './world.js';
 import { initAgents, update, render, agentAt, hooks, moveMayorTo, busyHouses, say, setIcon } from './agents.js';
-import { state, log, onChange } from './store.js';
-import { workOnTask, superviseNext, nextForReview, queenVisitLine, queenDelegate } from './brain.js';
+import { state, log, onChange, updateTask } from './store.js';
+import { workOnTask, superviseNext, nextForReview, queenVisitLine, queenDelegate, offlinePlan } from './brain.js';
 import { initSync, sync } from './sync.js';
 import { initSheetSync } from './sheets.js';
+import { BUILD } from './version.js';
 import { upcomingBills, niceDate } from './household.js';
 import { money } from './treasury.js';
 import { initUI, ui, selectAgent } from './ui.js';
@@ -31,6 +32,8 @@ initUI();
 window.__kingdomBooted = true;          // tells the start-up safety net all is well
 ui.onSelect = () => {};
 initSync();
+// Old free-mode results said "Offline mode: broke … into next steps"; give those tasks a real plan.
+for (const t of state.tasks) if (!t.deleted && /^Offline mode: broke /.test(t.result || '')) updateTask(t.id, { result: offlinePlan(t.owner, t) });
 initSheetSync(() => sync.leader);       // keep the King's Google Sheet up to date
 
 // ── Penny's daily bill reminder ─────────────────────────────
@@ -132,3 +135,23 @@ canvas.addEventListener('click', (e) => {
   }
   moveMayorTo({ x: tx, y: ty });
 });
+
+
+// ── Always-fresh app: service worker + update check ─────────
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+async function checkForUpdate() {
+  try {
+    const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+    const { version } = await r.json();
+    if (version && version !== BUILD && !document.getElementById('update-banner')) {
+      const bar = document.createElement('div');
+      bar.id = 'update-banner'; bar.className = 'update-banner'; bar.setAttribute('role', 'status');
+      bar.innerHTML = '<span>✨ A new version of the kingdom is ready.</span><button class="btn">Refresh</button>';
+      bar.querySelector('button').onclick = () => location.reload();
+      document.body.appendChild(bar);
+    }
+  } catch { /* offline: try later */ }
+}
+setTimeout(checkForUpdate, 5000);
+setInterval(checkForUpdate, 15 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });

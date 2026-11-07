@@ -62,6 +62,7 @@ function renderChat() {
   const p = agentById(ui.selected);
   $('#who').replaceChildren(h('b', {}, p.name), ` — ${p.role}`);
   $('#queen-quick').classList.toggle('hidden', p.id !== 'chief');
+  renderAgentTasks(p);
   const logEl = $('#chat-log'); logEl.replaceChildren();
   const hist = state.chats[ui.selected] || [];
   if (!hist.length) logEl.append(h('div', { class: 'msg assistant' }, h('span', { class: 'from' }, p.name),
@@ -73,6 +74,24 @@ function renderChat() {
     h('span', { class: 'from' }, m.role === 'user' ? state.mayorName : p.name, ' · ', timeStr(m.ts)), m.text));
   if (typing.has(ui.selected)) logEl.append(h('div', { class: 'msg assistant typing' }, `${p.name} is thinking…`));
   logEl.scrollTop = logEl.scrollHeight;
+}
+
+// The courtier's own tasks, right on their page (the Queen sees the whole court's).
+function renderAgentTasks(p) {
+  const box = $('#agent-tasks'); if (!box) return;
+  const mine = liveTasks().filter(t => (p.kind === 'chief' ? t.owner !== 'mayor' : t.owner === p.id));
+  const open = mine.filter(t => ['todo', 'doing', 'review', 'needs_approval'].includes(t.status));
+  const recent = mine.filter(t => t.status === 'done').slice(0, 3);
+  box.replaceChildren();
+  if (!open.length && !recent.length) return;
+  const row = (t) => h('button', { class: 'agent-task', onclick: () => { $('#task-filter-owner').value = p.kind === 'chief' ? '' : p.id; $('#task-filter-status').value = 'all'; showTab('tasks'); renderTasks(); } },
+    h('span', { class: `status ${t.status}` }, STATUS_LABEL[t.status] || t.status),
+    h('span', {}, p.kind === 'chief' ? `${agentById(t.owner)?.name}: ${t.title}` : t.title));
+  box.append(h('details', { open: open.length > 0 },
+    h('summary', {}, `📜 ${p.kind === 'chief' ? 'The court\'s' : 'My'} tasks · ${open.length} open`),
+    ...open.slice(0, 8).map(row),
+    recent.length ? h('div', { class: 'meta' }, 'Recently done') : null,
+    ...recent.map(row)));
 }
 
 async function sendChat(e) {
