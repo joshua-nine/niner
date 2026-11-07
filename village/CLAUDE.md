@@ -33,6 +33,9 @@ js/config.js            the same roster and rules used by the browser kingdom
 - Courtiers may use subagents as their helpers (owl, apprentice, whelp, squire, jester) for small errands.
 - The fantasy is flavour only: drafts, dates and plans must be real and usable.
 
+## Working with the live app (on the King's subscription)
+The app runs in free mode, so Claude does the real thinking and hands work back through the King's tracker spreadsheet. **Read `INBOX.md` and follow it.** In short: read the court's to-do list from the **Kingdom – Tasks** tab, and append tasks, results, notes, petitions and bill updates to **Kingdom – Inbox** (Status `new`). The app picks them up and marks each `done in app`.
+
 ## Connected tools (MCP)
 If Gmail or Google Calendar connectors are attached, use them **read-only, plus drafts**:
 - Gmail: `search_threads`, `get_thread`, labels, `create_draft`. Never `send_message`, `reply`, or `forward`.

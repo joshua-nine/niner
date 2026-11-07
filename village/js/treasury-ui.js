@@ -10,7 +10,7 @@ import {
   incomeTotals, billTotals, accountTotals, annualAmount, importTrackerFile, billsCSV, incomeCSV, accountsCSV,
   FREQUENCIES, ACCOUNT_TYPES, niceDate, todayISO, toNumber,
 } from './household.js';
-import { sheetSettings, sheetReady, sheetStatus, newKey, testSheet, sendToSheet, pullFromSheet, bridgeScript, uploadDoc, trashDoc } from './sheets.js';
+import { sheetSettings, sheetReady, sheetStatus, newKey, testSheet, sendToSheet, pullFromSheet, bridgeScript, uploadDoc, trashDoc, checkInbox } from './sheets.js';
 import { touchMeta } from './store.js';
 
 const $ = (s) => document.querySelector(s);
@@ -268,7 +268,7 @@ function sheetSection() {
   const tick = h('input', { type: 'checkbox', checked: st.tickPaid !== false });
   tick.addEventListener('change', () => { st.tickPaid = tick.checked; touchMeta(); });
   return section('sheet', `🔗 Google Sheet ${sheetReady() ? '· connected' : '· not connected'}`,
-    h('p', { class: 'note' }, 'Keeps your Google Sheet up to date. The kingdom writes its own tabs (Kingdom – Bills, Spending, Accounts, Income) and ticks a “Paid <month>” column in your Recurring Bills tab. Your other cells and formulas are never changed. It also saves bill documents you attach (📎) to a “Kingdom – Bills” folder in your Google Drive.'),
+    h('p', { class: 'note' }, 'Keeps your Google Sheet up to date. The kingdom writes its own tabs (Kingdom – Bills, Spending, Accounts, Income) and ticks a “Paid <month>” column in your Recurring Bills tab. Your other cells and formulas are never changed. It also saves bill documents you attach (📎) to a “Kingdom – Bills” folder in your Google Drive, and shares the court\'s to-do list with Claude (“Kingdom – Tasks”), picking up work Claude leaves in “Kingdom – Inbox”.'),
     sheetReady() ? null : h('ol', { class: 'steps' },
       h('li', {}, h('button', { class: 'btn', onclick: run(async () => { await navigator.clipboard.writeText(await bridgeScript()); }, () => 'Script copied, with your key filled in.') }, '📋 Copy the bridge script')),
       h('li', {}, 'Open your tracker sheet → Extensions → Apps Script. Delete what\'s there, paste, and click 💾 Save.'),
@@ -280,6 +280,7 @@ function sheetSection() {
     h('div', { class: 'btn-row' },
       h('button', { class: 'btn btn-ghost', disabled: !sheetReady(), onclick: run(testSheet, r => `Connected to “${r.sheet}”.`) }, 'Test connection'),
       h('button', { class: 'btn', disabled: !sheetReady(), onclick: run(() => sendToSheet({ force: true }), () => 'Sheet updated.') }, '⬆ Send now'),
+      h('button', { class: 'btn btn-ghost', disabled: !sheetReady(), onclick: run(() => checkInbox(), r => r.applied ? `Picked up ${r.applied} item${r.applied > 1 ? 's' : ''} from Claude.` : 'Nothing new from Claude.') }, '📥 Check inbox'),
       h('button', { class: 'btn btn-ghost', disabled: !sheetReady(), onclick: run(() => { if (!confirm('Update the Treasury from your sheet? Bills, accounts and income in the sheet will overwrite the same items here (nothing is deleted).')) throw new Error('Cancelled.'); return pullFromSheet(); }, c => `Pulled ${c.bills} bills from your sheet.`) }, '⬇ Pull from sheet')),
     sheetStatus.text ? h('p', { class: `note ${sheetStatus.ok === false ? 'warn-text' : ''}` }, sheetStatus.text) : null,
     h('details', {}, h('summary', { class: 'note' }, 'Key & advanced'),

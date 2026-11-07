@@ -7,6 +7,7 @@
 import { state, save, touchMeta, agentById, onChange, log } from './store.js';
 import { treasury } from './treasury.js';
 import { importTrackerFile, thisMonth } from './household.js';
+import { applyInbox } from './inbox.js';
 
 export const sheetStatus = { text: '', ok: null, at: 0, listeners: new Set() };
 const emit = (text, ok) => { Object.assign(sheetStatus, { text, ok, at: Date.now() }); sheetStatus.listeners.forEach(f => f()); };
@@ -31,6 +32,10 @@ function payload(action) {
       bills: strip(t.bills), accounts: strip(t.accounts), incomes: strip(t.incomes),
       entries: strip(t.entries).map(e => ({ ...e, byName: e.by === 'mayor' ? (state.mayorName || 'The King') : (agentById(e.by)?.name || e.by) })),
     },
+    // The court's to-do list, so Claude can read it from the sheet ("Kingdom – Tasks").
+    tasks: state.tasks.filter(k => !k.deleted && (k.status !== 'done' || Date.now() - (k.updated || 0) < 14 * 864e5)).slice(0, 200)
+      .map(k => ({ id: k.id, owner: k.owner, ownerName: agentById(k.owner)?.name || k.owner, title: k.title, status: k.status, notes: k.notes || '',
+        result: k.result || '', created: new Date(k.created || Date.now()).toISOString().slice(0, 16).replace('T', ' '), byName: k.by === 'mayor' ? (state.mayorName || 'The King') : (agentById(k.by)?.name || k.by) })),
   };
 }
 
@@ -103,6 +108,20 @@ export async function trashDoc(doc) {
   await call('POST', { key: sheetSettings().key, action: 'trash', id: doc.id });
 }
 
+// ── Hand-off with Claude: pick up the "Kingdom – Inbox" tab ──
+export async function checkInbox({ quiet = false } = {}) {
+  if (!sheetReady()) throw new Error('The Google Sheet isn\'t connected yet.');
+  let r;
+  try { r = await call('GET', null, `?action=inbox&key=${encodeURIComponent(sheetSettings().key)}`); }
+  catch (e) { throw new Error(/unknown action/i.test(e.message) ? 'Your bridge script is an older version. Copy it again (Treasury → Google Sheet), paste it in Apps Script, then Deploy → Manage deployments → ✏️ → New version.' : e.message); }
+  if (!r.items.length) { if (!quiet) emit('Inbox checked: nothing new from Claude.', true); return { applied: 0, failed: 0 }; }
+  const { applied, acks } = applyInbox(r.items);
+  await call('POST', { key: sheetSettings().key, action: 'inbox-ack', acks });
+  const failed = acks.filter(a => !a.ok).length;
+  emit(`Inbox: picked up ${applied} item${applied === 1 ? '' : 's'} from Claude${failed ? `, ${failed} couldn't be applied (see the App note column)` : ''}.`, !failed);
+  return { applied, failed };
+}
+
 export async function pullFromSheet() {
   if (!sheetReady()) throw new Error('The Google Sheet isn\'t connected yet.');
   emit('Reading your sheet…', null);
@@ -123,6 +142,11 @@ export async function bridgeScript() {
 // Automatic sending: a few seconds after the Treasury changes.
 let timer = null;
 export function initSheetSync(isLeader) {
+  // Check Claude's inbox on start, every 10 minutes, and when the app comes back to the screen.
+  const inboxTick = () => { if (sheetReady() && isLeader()) checkInbox({ quiet: true }).catch(() => {}); };
+  setTimeout(inboxTick, 12000);
+  setInterval(inboxTick, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(inboxTick, 3000); });
   onChange(() => {
     const s = state.settings.sheet;
     if (!s || !s.auto || !sheetReady() || !isLeader()) return;
